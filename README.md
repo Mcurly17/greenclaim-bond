@@ -187,7 +187,7 @@ Notes:
 | Page | Sentence to challenge (rule R1) | Expected verdict |
 |---|---|---|
 | [gourde-verte.html](https://mcurly17.github.io/greenclaim-bond/gourde-verte.html) | `Notre gourde éco-responsable pour la planète.` | **UPHELD**: generic claim with no figure, label or explanation anywhere on the page |
-| [gourde-recyclee.html](https://mcurly17.github.io/greenclaim-bond/gourde-recyclee.html) | `Gourde éco-conçue : fabriquée à 100 % en acier inoxydable recyclé, certifiée EU Ecolabel.` | **REJECTED**: the claim is specified in the same sentence and the next paragraph (recycled share, EU Ecolabel licence number marked as fictional) |
+| [gourde-recyclee.html](https://mcurly17.github.io/greenclaim-bond/gourde-recyclee.html) | `Gourde éco-conçue : fabriquée à 100 % en acier inoxydable recyclé.` | **REJECTED**: the claim is specified in the same sentence and in the next paragraph (100 % of the mass, steel from remelted industrial scrap, no plastic) |
 
 Snapshot each page with [Save Page Now](https://web.archive.org/save) **after** the pledge exists. The contract refuses captures older than the pledge, and it only follows redirects to captures taken between the pledge and the challenge.
 
