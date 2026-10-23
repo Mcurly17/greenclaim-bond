@@ -42,6 +42,8 @@ flowchart LR
   state --> settle["Settlement: pay challenger or credit the bond"]
 ```
 
+**Frontend:** `frontend/` is a placeholder. It is the generic Next.js shell from the boilerplate, rebranded, and it does not call the contract yet. Interaction today goes through `scripts/greenclaim.ts` and the `genlayer` CLI.
+
 ## Methods
 
 | Method | Type | Who | Effect |
@@ -110,7 +112,7 @@ If validators keep disagreeing, GenLayer rotates the leader and the native appea
 | Matching a single word everywhere | Quotes must be 10 to 240 characters and must appear verbatim (after normalization) on the page. |
 | Duplicate challenges | One OPEN challenge per (pledge, page, rule): `[EXPECTED] already open`. |
 | Brand withdraws its bond under an open challenge | `withdraw` only after `ends_at`, and only `bond - reserved`. Each open challenge keeps one payout reserved until it settles. |
-| Brand challenges itself to recycle funds | Refused. |
+| Brand challenges itself to recycle funds | Same address refused; a second wallet gains nothing since lost stakes return to the same bond. |
 | Archive outage used to make a challenge fail | No AI or web call at filing. Outages revert `resolve`. After 3 days `expire()` refunds the stake. |
 
 ## Tests
@@ -181,7 +183,8 @@ Notes:
 | Network | Address | Link |
 |---|---|---|
 | Studio (studionet) | _not deployed yet_ | `https://studio.genlayer.com/?import-contract=0x...` |
-| Testnet Bradbury (Phase 2) | _not deployed yet_ | `https://scan.testnet-chain.genlayer.com/address/0x...` |
+| Studio explorer (studionet) | _not deployed yet_ | `https://explorer-studio.genlayer.com/address/0x...` |
+| Testnet Bradbury (Phase 2, optional) | _not deployed yet_ | `https://scan.testnet-chain.genlayer.com/address/0x...` |
 
 Commands and network checks: [`DEPLOY.md`](DEPLOY.md).
 
@@ -212,8 +215,13 @@ On Studionet, the same flow runs end to end with `gltest tests/integration/ -v -
 - **The judgment depends on the shown context.** The LLM sees ±1,500 characters around the quote plus the page title. A specification placed elsewhere on the page can be missed, and the reverse also happens.
 - **Text only.** Claims inside images or packaging photos are out of scope; a planned milestone covers them with screenshots and multimodal prompts. Pages that render only with JavaScript fall back to `web.render(mode="text")` of the archived page.
 - **Language coverage.** The prompts and rules are written in English with French examples. Other languages rely on the model.
+- **Domain ownership is not proven.** Anyone can create a pledge for a domain they do not own; domain ownership proof via /.well-known/greenclaim.txt read by validators is the first planned milestone.
 - **Wayback limits.**
-  - Redirects to a nearby capture are accepted, so the judged capture may differ by minutes or hours from the requested timestamp.
+  - Redirects to a nearby capture are accepted, so the judged capture can differ from the requested timestamp. It always stays between the pledge's creation and the challenge's opening; anything else settles QUOTE_NOT_FOUND. The capture actually judged is shown as `judged_ts`.
   - Archive rate limits can delay resolution, which is why the 3-day window and `expire()` exist.
 - **Views scan all challenges.** `standing` and `list_challenges` are O(n), which is fine for views. A frontend indexer is the scalable path.
 - **Runner pin.** The runner hash is pinned to the version documented in the GenLayer skills (SDK v0.2 API, `run_nondet_unsafe`). The linter reports a newer runner (v0.3 API), and migrating needs code changes.
+
+## Credits
+
+Scaffolded from the official [genlayer-project-boilerplate](https://github.com/genlayerlabs/genlayer-project-boilerplate) (MIT, YeagerAI): test, lint and deploy tooling and the Next.js shell. The boilerplate's example contract was removed.
