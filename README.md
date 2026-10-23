@@ -191,13 +191,29 @@ Notes:
 
 Snapshot each page with [Save Page Now](https://web.archive.org/save) **after** the pledge exists. The contract refuses captures older than the pledge, and it only follows redirects to captures taken between the pledge and the challenge.
 
+### Studionet run (23 October 2026)
+
+Pledge 0 "Demo Gourdes": bond 0.3 GEN, payout 0.1 GEN, 30 days, both pages. Each challenge staked 0.01 GEN on rule R1. Both verdicts match the expectation, each reached in one round with a majority of agreeing validators.
+
+| Challenge | Capture judged | Verdict | Validators' reason | Resolve transaction |
+|---|---|---|---|---|
+| 0, gourde-verte | [`20261023202211`](https://web.archive.org/web/20261023202211id_/https://mcurly17.github.io/greenclaim-bond/gourde-verte.html) | **UPHELD** | "Éco-responsable" is a generic environmental claim equivalent to "eco-friendly". No specific environmental performance explanation or official ecolabel appears anywhere on the page. | [`0xfe68fc5b…1f413b9e`](https://explorer-studio.genlayer.com/tx/0xfe68fc5bdfe4fac1d8f3e9e951c09fbb82953d15de15f9f4f4646e0d1f413b9e) |
+| 1, gourde-recyclee | [`20261023202240`](https://web.archive.org/web/20261023202240id_/https://mcurly17.github.io/greenclaim-bond/gourde-recyclee.html) | **REJECTED** | The claim is accompanied by a specific explanation: the bottle is made from 100% recycled stainless steel, with clarified recycled content and material source on the same page. | [`0xf552cc72…0f81cb2c`](https://explorer-studio.genlayer.com/tx/0xf552cc72e1a8cb9266e65799b3468ff46c60bbd7e5890e76ab877dcd0f81cb2c) |
+
+Settlement, checked against on-chain balances:
+- the UPHELD challenge paid the challenger 0.11 GEN, its stake plus the payout;
+- the REJECTED challenge's 0.01 GEN stake went to the bond, which now holds 0.21 GEN;
+- `standing` shows 1 upheld and 1 rejected for the brand.
+
 ## Deployments
 
 | Network | Address | Link |
 |---|---|---|
-| Studio (studionet) | _not deployed yet_ | `https://studio.genlayer.com/?import-contract=0x...` |
-| Studio explorer (studionet) | _not deployed yet_ | `https://explorer-studio.genlayer.com/address/0x...` |
-| Testnet Bradbury (Phase 2, optional) | _not deployed yet_ | `https://scan.testnet-chain.genlayer.com/address/0x...` |
+| Studio (studionet) | `0x1f55BBf41a944666B287a802CC98c118e14f0932` | [studio.genlayer.com/?import-contract=0x1f55…0932](https://studio.genlayer.com/?import-contract=0x1f55BBf41a944666B287a802CC98c118e14f0932) |
+| Studio explorer (studionet) | `0x1f55BBf41a944666B287a802CC98c118e14f0932` | [explorer-studio.genlayer.com/address/0x1f55…0932](https://explorer-studio.genlayer.com/address/0x1f55BBf41a944666B287a802CC98c118e14f0932) |
+| Testnet Bradbury (Phase 2, optional) | _not deployed_ | `https://scan.testnet-chain.genlayer.com/address/0x...` |
+
+Studionet deploy transaction: [`0xa90de554…ba019d53`](https://explorer-studio.genlayer.com/tx/0xa90de554b512e65ac7ee9aa9f267f144b10c2153d3ef881be374e883ba019d53).
 
 Commands and network checks: [`DEPLOY.md`](DEPLOY.md).
 
@@ -205,7 +221,7 @@ Commands and network checks: [`DEPLOY.md`](DEPLOY.md).
 
 The `genlayer` CLI cannot attach a value to `write`. So the steps below use `npm run greenclaim`, a thin wrapper around genlayer-js `writeContract({ value })` in [`scripts/greenclaim.ts`](scripts/greenclaim.ts).
 
-Setup: fill `.env` from `.env.example` (network, contract address, two throwaway keys), then run `npm install --workspaces=false`. Amounts are in GEN.
+Setup: fill `.env` from `.env.example` (network, contract address, two throwaway keys), then run `npm install --workspaces=false`. Without a contract yet, `npm run greenclaim -- deploy` deploys one and prints its address. Amounts are in GEN.
 
 1. **Brand pledges** 0.2 GEN, with a payout of 0.1 GEN, for 30 days over a real product page:
    `npm run greenclaim -- pledge "Brand" brand.example 0.1 30 0.2 https://brand.example/product`

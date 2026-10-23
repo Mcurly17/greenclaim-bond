@@ -142,3 +142,4 @@ stateDiagram-v2
   - `--args` runs `JSON.parse` on each argument, so a JSON-looking string becomes a list.
   - Payable calls therefore go through genlayer-js `writeContract({ value })` (see `scripts/greenclaim.ts`) or gltest `.transact(value=...)`.
 - **Phase 2 support:** only `genlayer@0.40.0-rc.5` and `genlayer-js@2.0.0-rc.2` ship the Bradbury Phase 2 presets. The stable lines and the Python tooling still point at `rpc-bradbury`.
+- **Studio compatibility:** hosted Studio does not decode transactions built by `genlayer-js@2.0.0-rc.2` (a deploy finalized as an empty transfer). `genlayer-js@1.1.8` works, so the script uses 1.1.8 for Studionet and the RC only for Bradbury.

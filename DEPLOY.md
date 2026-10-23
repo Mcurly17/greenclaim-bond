@@ -1,6 +1,6 @@
 # Deploying GreenClaim Bond
 
-Nothing here has been run yet. Each command below deploys or spends test GEN only when you run it.
+Section 1 (Studionet) was run end to end on 23 October 2026; the results are in the README "Live demo" section. Section 2 (Bradbury) has not been run. Each command below deploys or spends test GEN only when you run it.
 
 Network values were re-checked on 23 October 2026, after the 22 October move of Bradbury to an Arbitrum Orbit chain:
 - the [networks page](https://docs.genlayer.com/developers/networks);
@@ -26,7 +26,7 @@ Stale values, do not use: `rpc-bradbury.genlayer.com` and `explorer-bradbury.gen
 pytest tests/direct -v                              # 17 passed
 $env:PYTHONIOENCODING = "utf-8"                     # Windows console only
 genvm-lint check contracts/green_claim_bond.py      # must be 0 errors
-npm install --workspaces=false                      # root genlayer-js 2.0.0-rc.2 for scripts/greenclaim.ts
+npm install --workspaces=false                      # genlayer-js 1.1.8, plus 2.0.0-rc.2 as genlayer-js-phase2
 npm install -g genlayer@rc                          # CLI 0.40.0-rc.5: the only line with Phase 2 presets
 genlayer --version
 ```
@@ -55,13 +55,29 @@ genlayer account create --name gcb-studio           # prompts for a keystore pas
 genlayer deploy --contract contracts/green_claim_bond.py
 ```
 
+**Option C: script (used for the live deployment)**
+```powershell
+$env:GREENCLAIM_SIGNER = "1"
+npm run greenclaim -- deploy                        # prints the hash and contractAddress
+```
+Then set `GREENCLAIM_CONTRACT` in `.env`.
+
+**SDK version matters.** On hosted Studionet, a deploy sent with genlayer-js 2.0.0-rc.2 reached ConsensusMain, but Studio decoded its payload as empty: the transaction finalized as a plain transfer with `NO_MAJORITY`, no validators, and no contract. The same deploy with genlayer-js 1.1.8 was accepted (`MAJORITY_AGREE`). So `scripts/greenclaim.ts` loads 1.1.8 for localnet and Studionet, and the 2.0.0-rc.2 alias only for `testnet-bradbury`.
+
 ### 1.2 Scenario
 
 Read-only calls work from the CLI. Payable methods do not: `genlayer write` has no message-value option (`--fee-value` is the fee deposit), and `--args` turns `'[...]'` into a list, not a string. So `create_pledge`, `top_up` and `challenge` go through `npm run greenclaim`, which uses genlayer-js `writeContract({ value })`.
 
-**Funding unverified.** Value transfers need a funded sender, even though Studionet is gasless. Use the faucet button in Studio's account selector. `sim_fundAccount`, used by the integration test, is officially localnet-only in the SDKs, so it may be refused on hosted Studionet.
+**Funding.** Value transfers need a funded sender, even though Studionet is gasless. Hosted Studionet accepted `sim_fundAccount` on 23 October 2026, although the SDKs document it as localnet-only. Each call credited 1 GEN:
+```powershell
+$body = '{"jsonrpc":"2.0","id":1,"method":"sim_fundAccount","params":["<address>",1000000000000000000]}'
+Invoke-RestMethod -Method Post -Uri https://studio.genlayer.com/api -ContentType application/json -Body $body
+```
+The faucet button in Studio's account selector is the fallback.
 
-**Option C: one-shot integration test.** It deploys its own instance:
+**Receipts.** Studio receipts are snake_case. The script reads `status_name`, `result_name` and the leader's `execution_result`, and prints them as `status`, `consensus` and `execution`. A resolve succeeded when `execution` is `SUCCESS`. Then read `challenge-info` for the verdict. If Studio's gateway returns an HTML error while polling, the script re-polls the same hash; it never resends the transaction.
+
+**Option D: one-shot integration test.** It deploys its own instance:
 ```powershell
 $env:GREENCLAIM_IT_PAGE  = "https://<brand domain>/<product page>"
 $env:GREENCLAIM_IT_QUOTE = "<exact sentence copied from that page>"
