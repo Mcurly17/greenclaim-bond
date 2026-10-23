@@ -46,7 +46,7 @@ genlayer --version
 1. Open [studio.genlayer.com](https://studio.genlayer.com).
 2. Load `contracts/green_claim_bond.py` in the contracts panel.
 3. Deploy it; the constructor has no arguments.
-4. Copy the address. The shareable link is `https://studio.genlayer.com/?import-contract=<address>`.
+4. Copy the address. The shareable link is `https://studio.genlayer.com/?import-contract=<address>`, and the explorer page is `https://explorer-studio.genlayer.com/address/<address>`.
 
 **Option B: CLI**
 ```powershell
@@ -69,7 +69,9 @@ gltest tests/integration/ -v -s --network studionet
 ```
 It captures a fresh Wayback snapshot with Save Page Now, because snapshots older than the pledge are refused. Then it runs `challenge` and `resolve` and prints the final status and reason.
 
-## 2. Testnet Bradbury (Phase 2)
+## 2. Testnet Bradbury (Phase 2, optional)
+
+Not required for the submission. Section 1 is enough.
 
 ### 2.1 Select and verify the network
 
@@ -154,8 +156,8 @@ npm run greenclaim -- standing <brand address>
 ## 3. After deploying
 
 Fill the README "Deployments" table:
-- the Studio import link;
-- the Bradbury address;
-- explorer links for the deploy and resolve transactions.
+- the Studio import link, `https://studio.genlayer.com/?import-contract=<address>`;
+- the Studio explorer link, `https://explorer-studio.genlayer.com/address/<address>`;
+- if deployed, the Bradbury address and explorer links for the deploy and resolve transactions.
 
-The "Intelligent Contracts" submission needs the GitHub repo, the Bradbury explorer link and the Studio link.
+The "Intelligent Contracts" submission accepts the GitHub repo, the Studio link and the Studio explorer link. A Bradbury deployment is optional.
