@@ -100,6 +100,7 @@ class Challenge:
     rule: str                   # "R1" | "R2" | "R3"
     quote: str                  # 10..240 characters
     snapshot_ts: str            # 14-digit Wayback timestamp
+    judged_ts: str              # capture actually read after redirects ("" until judged)
     challenger: Address
     stake: u256
     status: str                 # OPEN | UPHELD | REJECTED | QUOTE_NOT_FOUND | EXPIRED
@@ -166,6 +167,13 @@ def _parse_iso(value: str) -> datetime.datetime:
         raise _expected("invalid stored timestamp")
     y, mo, d, h, mi, s = (int(g) for g in m.groups())
     return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc)
+
+
+def _iso_to_ts(value: str) -> str:
+    m = _ISO_RE.match(value)
+    if m is None:
+        raise _expected("invalid stored timestamp")
+    return "".join(m.groups())
 
 
 def _parse_snapshot_ts(value: str) -> datetime.datetime:
@@ -267,14 +275,24 @@ def _page_key(url: str) -> str:
     return host + m.group(2).rstrip("/")
 
 
-def _redirect_target(location: str, page_url: str) -> str | None:
+def _archive_url(ts: str, page_url: str) -> str:
+    return ARCHIVE_PREFIX + ts + "id_/" + page_url
+
+
+def _redirect_target(
+    location: str, page_url: str, created_ts: str, opened_ts: str
+) -> tuple[str, str] | None:
     loc = location.strip()
     if loc.startswith("/web/"):
         loc = "https://web.archive.org" + loc
     m = _WAYBACK_RE.match(loc)
     if m is None or _page_key(m.group(2)) != _page_key(page_url):
         return None
-    return ARCHIVE_PREFIX + m.group(1) + "id_/" + m.group(2)
+    ts = m.group(1)
+    # Same-length digit strings: lexicographic order is chronological order.
+    if ts < created_ts or ts > opened_ts:
+        raise gl.vm.UserError(f"{ERROR_EXTERNAL} redirected capture outside the allowed window")
+    return _archive_url(ts, m.group(2)), ts
 
 
 def _header(headers: dict, name: str) -> str:
@@ -388,7 +406,7 @@ def _same_decision(leader: object, mine: dict) -> bool:
         value = leader.get(key)
         if not isinstance(value, bool) or value != mine[key]:
             return False
-    return True
+    return leader.get("judged_ts") == mine["judged_ts"]
 
 
 def _handle_leader_error(leaders_res, leader_fn) -> bool:
@@ -437,16 +455,21 @@ def _web_render_text(url: str) -> str:
         raise gl.vm.UserError(f"{ERROR_TRANSIENT} archive render failed")
 
 
-def _fetch_snapshot_text(archive_url: str, page_url: str) -> tuple[str, str]:
-    url = archive_url
+def _fetch_snapshot_text(
+    snapshot_ts: str, page_url: str, created_ts: str, opened_ts: str
+) -> tuple[str, str, str]:
+    url = _archive_url(snapshot_ts, page_url)
+    judged_ts = snapshot_ts
     for _hop in range(MAX_REDIRECTS + 1):
         resp = _web_get(url)
         status = int(resp.status)
         if status in (301, 302, 303, 307, 308):
-            target = _redirect_target(_header(resp.headers or {}, "location"), page_url)
+            target = _redirect_target(
+                _header(resp.headers or {}, "location"), page_url, created_ts, opened_ts
+            )
             if target is None:
                 raise gl.vm.UserError(f"{ERROR_EXTERNAL} snapshot redirected away from the page")
-            url = target
+            url, judged_ts = target
             continue
         if status in (408, 425, 429) or status >= 500:
             raise gl.vm.UserError(f"{ERROR_TRANSIENT} archive unavailable ({status})")
@@ -458,7 +481,7 @@ def _fetch_snapshot_text(archive_url: str, page_url: str) -> tuple[str, str]:
         text, title = _html_to_text(body)
         if text == "":
             text = _compact(_web_render_text(url))
-        return text, title
+        return text, title, judged_ts
     raise gl.vm.UserError(f"{ERROR_EXTERNAL} too many archive redirects")
 
 
@@ -472,17 +495,22 @@ def _call_llm(prompt: str) -> dict:
     return _parse_verdict(raw)
 
 
-def _assess(archive_url: str, page_url: str, quote: str, rule: str) -> dict:
-    text, title = _fetch_snapshot_text(archive_url, page_url)
+def _assess(
+    snapshot_ts: str, page_url: str, quote: str, rule: str, created_ts: str, opened_ts: str
+) -> dict:
+    text, title, judged_ts = _fetch_snapshot_text(snapshot_ts, page_url, created_ts, opened_ts)
     context = _find_context(text, quote)
     if context is None:
-        return {
+        verdict = {
             "quote_found": False,
             "violation": False,
             "specification_present": False,
             "reason": "quote not in snapshot",
         }
-    return _call_llm(_build_prompt(rule, quote, context, title))
+    else:
+        verdict = _call_llm(_build_prompt(rule, quote, context, title))
+    verdict["judged_ts"] = judged_ts
+    return verdict
 
 
 # ---------------------------------------------------------------------------
@@ -631,6 +659,7 @@ class GreenClaimBond(gl.Contract):
             rule=rule,
             quote=clean_quote,
             snapshot_ts=snapshot_ts,
+            judged_ts="",
             challenger=sender,
             stake=u256(stake),
             status=STATUS_OPEN,
@@ -654,10 +683,13 @@ class GreenClaimBond(gl.Contract):
         page_url = str(p.pages[int(c.page_index)])
         quote = str(c.quote)
         rule = str(c.rule)
-        archive_url = ARCHIVE_PREFIX + str(c.snapshot_ts) + "id_/" + page_url
+        snapshot_ts = str(c.snapshot_ts)
+        # The judged capture must sit between pledge creation and challenge filing.
+        created_ts = _iso_to_ts(str(p.created_at))
+        opened_ts = _iso_to_ts(str(c.opened_at))
 
         def leader_fn() -> dict:
-            return _assess(archive_url, page_url, quote, rule)
+            return _assess(snapshot_ts, page_url, quote, rule, created_ts, opened_ts)
 
         def validator_fn(leaders_res: gl.vm.Result) -> bool:
             if not isinstance(leaders_res, gl.vm.Return):
@@ -679,6 +711,10 @@ class GreenClaimBond(gl.Contract):
         else:
             status = STATUS_UPHELD if verdict.get("violation") is True else STATUS_REJECTED
             reason = str(verdict.get("reason", ""))
+        if isinstance(verdict, dict):
+            judged_ts = verdict.get("judged_ts")
+            if isinstance(judged_ts, str) and _SNAPSHOT_RE.match(judged_ts) is not None:
+                c.judged_ts = judged_ts
         self._settle(challenge_id, status, reason)
         return status
 
@@ -778,6 +814,7 @@ class GreenClaimBond(gl.Contract):
             "rule": c.rule,
             "quote": c.quote,
             "snapshot_ts": c.snapshot_ts,
+            "judged_ts": c.judged_ts,
             "challenger": c.challenger.as_hex,
             "stake": int(c.stake),
             "status": c.status,

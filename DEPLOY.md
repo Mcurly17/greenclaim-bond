@@ -23,7 +23,7 @@ Stale values, do not use: `rpc-bradbury.genlayer.com` and `explorer-bradbury.gen
 
 ```powershell
 .\.venv\Scripts\activate
-pytest tests/direct -v                              # 15 passed
+pytest tests/direct -v                              # 17 passed
 $env:PYTHONIOENCODING = "utf-8"                     # Windows console only
 genvm-lint check contracts/green_claim_bond.py      # must be 0 errors
 npm install --workspaces=false                      # root genlayer-js 2.0.0-rc.2 for scripts/greenclaim.ts

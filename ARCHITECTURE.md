@@ -36,17 +36,24 @@ https://web.archive.org/web/{snapshot_ts}id_/{page_url}
 - `page_url` is one of the 1 to 5 https pages fixed at pledge creation. Each one is normalized and must be on `domain` or `www.` + `domain`.
 - `snapshot_ts` is 14 digits. It must be no later than the challenge time and no earlier than the pledge creation.
 - The `id_` suffix returns the original bytes without the Wayback toolbar. A snapshot never changes, so every validator reads the same document.
-- **Redirects:** Wayback answers with a 3xx to the nearest capture. The SDK `Response` exposes no final URL and redirect behaviour is undocumented, so the contract follows at most 2 hops itself. It only follows a `Location` that stays on `web.archive.org/web/<14 digits>id_/` and points at the same page.
+- **Redirects:** Wayback answers with a 3xx to the nearest capture. The SDK `Response` exposes no final URL and redirect behaviour is undocumented, so the contract follows at most 2 hops itself.
+  - It only follows a `Location` that stays on `web.archive.org/web/<14 digits>id_/` and points at the same page. Otherwise it raises `[EXTERNAL] snapshot redirected away from the page`.
+  - The target capture must also lie between the pledge's `created_at` and the challenge's `opened_at`, both inclusive. Otherwise it raises `[EXTERNAL] redirected capture outside the allowed window`, before fetching that capture.
+  - The timestamp actually read is stored as `Challenge.judged_ts`.
 
 ## 3. Non-deterministic call (leader)
 
-Before the block, `resolve()` copies plain strings into locals: archive URL, page URL, quote, rule.
+Before the block, `resolve()` copies plain strings into locals:
+- `snapshot_ts`, page URL, quote and rule;
+- the window bounds `created_ts` and `opened_ts` (14 digits).
+
 Storage is never read inside the block.
 
 ```mermaid
 flowchart TD
   fetch["gl.nondet.web.get(archive_url)"] --> status{"status"}
-  status -->|"3xx inside web.archive.org"| fetch
+  status -->|"3xx, same page, capture in window"| fetch
+  status -->|"3xx elsewhere or outside window"| external
   status -->|"429, 408, 5xx, network error"| transient["raise TRANSIENT"]
   status -->|"other 4xx"| external["raise EXTERNAL"]
   status -->|"2xx"| text["strip script/style/tags, unescape, compact spaces"]
@@ -74,7 +81,7 @@ flowchart TD
   - `[EXPECTED]` / `[EXTERNAL]`: the validator re-runs the block and must hit the identical message.
   - `[TRANSIENT]` on both sides: agree.
   - `[LLM_ERROR]` or unknown: disagree, which triggers leader rotation.
-- **Leader returned:** the validator **re-runs the whole task** (fetch, extract, match, LLM). It agrees only if `quote_found` **and** `violation` are equal.
+- **Leader returned:** the validator **re-runs the whole task** (fetch, extract, match, LLM). It agrees only if `quote_found`, `violation` **and** `judged_ts` are equal. `judged_ts` is stored, so a leader must not be able to report a capture it did not read.
 - **Not compared:** `reason` and `specification_present` are free text or advisory and are not part of the settlement.
 
 This is never a format-only check: the validator produces its own answer from the same immutable source.
@@ -83,7 +90,7 @@ This is never a format-only check: the validator produces its own answer from th
 
 ```python
 Pledge:    brand, name, domain, pages[1..5], bond, reserved, payout, min_stake, ends_at, active, created_at
-Challenge: pledge_id, page_index, rule, quote, snapshot_ts, challenger, stake, status, reason, opened_at, resolve_deadline
+Challenge: pledge_id, page_index, rule, quote, snapshot_ts, judged_ts, challenger, stake, status, reason, opened_at, resolve_deadline
 GreenClaimBond: pledges, challenges, next_pledge, next_challenge, open_keys, pool
 ```
 
@@ -91,7 +98,9 @@ GreenClaimBond: pledges, challenges, next_pledge, next_challenge, open_keys, poo
 - **Duplicates:** `open_keys["{pledge}:{page}:{rule}"]` blocks a second OPEN challenge on the same page and rule.
 - **Invariant:** `reserved <= bond`. Every open challenge holds exactly one `payout` in `reserved`.
 - **`pool`:** a cumulative counter of lost stakes. The stakes themselves are credited to the challenged pledge's bond.
-- **Deviation from SPEC 4.3:** `Pledge.created_at` is added, as the last field. The rule "snapshot >= pledge creation" needs it.
+- **Deviation from SPEC 4.3:**
+  - `Pledge.created_at` is added as the last field; the rule "snapshot >= pledge creation" needs it.
+  - `Challenge.judged_ts` records the capture actually judged.
 
 ## 6. Settlement (deterministic, outside the nondet block)
 

@@ -13,6 +13,7 @@ from .conftest import (
     PAGE,
     PAYOUT,
     QUOTE,
+    SNAPSHOT_TS,
     SPECIFIC_PAGE,
     STAKE,
     T0,
@@ -146,6 +147,7 @@ def test_resolve_upheld_pays_challenger(direct_vm, contract, direct_alice, direc
 
     c = contract.get_challenge(0)
     assert c["status"] == "UPHELD" and c["reason"] == "generic"
+    assert c["judged_ts"] == SNAPSHOT_TS
     p = contract.get_pledge(0)
     assert p["bond"] == BOND - PAYOUT and p["reserved"] == 0
     assert transfers == [(to_hex(direct_bob), STAKE + PAYOUT)]
@@ -225,6 +227,52 @@ def test_wayback_redirect_to_neighbour_capture_is_followed(direct_vm, contract, 
     mock_verdict(direct_vm, True)
 
     assert contract.resolve(0) == "UPHELD"
+    c = contract.get_challenge(0)
+    assert c["snapshot_ts"] == SNAPSHOT_TS and c["judged_ts"] == "20261024093000"
+
+
+def _redirect_to_capture(vm, ts):
+    target = f"https://web.archive.org/web/{ts}id_/https://example-brand.fr/gourde"
+    vm.mock_web(
+        rf"web\.archive\.org/web/{SNAPSHOT_TS}id_/",
+        {"method": "GET", "response": {"status": 302, "headers": {"Location": target.encode()}, "body": b""}},
+    )
+    vm.mock_web(rf"web\.archive\.org/web/{ts}id_/", {"method": "GET", "status": 200, "body": GENERIC_PAGE})
+
+
+@pytest.mark.parametrize(
+    "capture_ts",
+    [
+        "20261023115959",  # one second before the pledge was created (T0)
+        "20261025120001",  # one second after the challenge was opened (T_CHALLENGE)
+    ],
+    ids=["before_pledge", "after_opened_at"],
+)
+def test_redirect_to_capture_outside_window_is_quote_not_found(
+    direct_vm, contract, direct_alice, direct_bob, transfers, capture_ts
+):
+    make_pledge(direct_vm, contract, direct_alice)
+    open_challenge(direct_vm, contract, direct_bob)
+
+    direct_vm.strict_mocks = True
+    _redirect_to_capture(direct_vm, capture_ts)
+    mock_verdict(direct_vm, True)
+
+    assert contract.resolve(0) == "QUOTE_NOT_FOUND"
+    # Neither the out-of-window capture nor the LLM is ever called.
+    with pytest.warns(RuntimeWarning) as record:
+        direct_vm.clear_mocks()
+    direct_vm.strict_mocks = False
+    unmatched = {str(w.message) for w in record}
+    assert f"Web mock never matched: web\\.archive\\.org/web/{capture_ts}id_/" in unmatched
+    assert any(m.startswith("LLM mock never matched") for m in unmatched)
+
+    c = contract.get_challenge(0)
+    assert c["reason"] == "[EXTERNAL] redirected capture outside the allowed window"
+    assert c["judged_ts"] == ""
+    p = contract.get_pledge(0)
+    assert p["bond"] == BOND + STAKE and p["reserved"] == 0
+    assert transfers == []
 
 
 def test_redirect_outside_the_page_is_external(direct_vm, contract, direct_alice, direct_bob):
@@ -294,6 +342,12 @@ def test_validator_disagrees_on_different_violation(direct_vm, contract, direct_
     # Validator cannot find the quote while the leader did -> disagree.
     direct_vm.clear_mocks()
     mock_snapshot(direct_vm, SPECIFIC_PAGE.replace("éco-responsable", "pratique"))
+    assert direct_vm.run_validator() is False
+
+    # Same verdict, but the validator read another capture -> disagree.
+    direct_vm.clear_mocks()
+    _redirect_to_capture(direct_vm, "20261024093000")
+    mock_verdict(direct_vm, True)
     assert direct_vm.run_validator() is False
 
 
