@@ -1,5 +1,7 @@
-genlayer-py @ git+https://github.com/genlayerlabs/genlayer-py@v0.18
-genlayer-test @ git+https://github.com/genlayerlabs/genlayer-testing-suite@v0.29
+# genlayer-py 0.18.0, head of branch v0.18 on 2026-10-23
+genlayer-py @ git+https://github.com/genlayerlabs/genlayer-py@a3dc35e04898e3889cbfa855bcaf7d2664675b8f
+# genlayer-test 0.29.2, head of branch v0.29 on 2026-10-23
+genlayer-test @ git+https://github.com/genlayerlabs/genlayer-testing-suite@9c09578b143905471fb0657dd53bdaf18da8e35f
 # genvm-linter tag v0.11.1-rc.2
 genvm-linter @ git+https://github.com/genlayerlabs/genvm-linter@28450e665666300fc648dbe495110dfd0cb6a7b4
 requests>=2.31.0
