@@ -124,7 +124,7 @@ pytest tests/direct -v
 genvm-lint check contracts/green_claim_bond.py
 ```
 
-Coverage of SPEC 4.7 and 4.6, in `tests/direct/test_green_claim_bond.py`:
+Coverage of the specified scenarios and edge cases, in `tests/direct/test_green_claim_bond.py`:
 
 | # | Test | Edge cases |
 |---|---|---|

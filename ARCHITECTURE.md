@@ -1,6 +1,6 @@
 # GreenClaim Bond: architecture
 
-One-page boundary note, written before the contract (see `SPEC.md` section 4).
+One-page boundary note, written before the contract.
 
 **Question the contract settles:** does *this exact sentence*, on *this archived page*, break *one fixed rule* (R1, R2 or R3, inspired by Directive (EU) 2024/825)?
 Everything around that single judgment (money, deadlines, quote matching, URL construction) is deterministic code.
@@ -67,7 +67,7 @@ flowchart TD
 ```
 
 - **Normalization (`norm`):** NFKC, curly quotes and guillemets unified, dashes unified, lowercase, whitespace compacted.
-- **Prompt:** the template from SPEC 4.5, built entirely in code.
+- **Prompt:** a fixed template, built entirely in code.
   - The rule text is a constant (`RULE_TEXT`).
   - The quote and page context sit between `<quote>` and `<page_context>` tags, with `<` and `>` neutralized so page content cannot close a tag.
 - **LLM output:** only two booleans matter. A non-dict or an unparsable `violation` raises `[LLM_ERROR]`.
@@ -98,7 +98,7 @@ GreenClaimBond: pledges, challenges, next_pledge, next_challenge, open_keys, poo
 - **Duplicates:** `open_keys["{pledge}:{page}:{rule}"]` blocks a second OPEN challenge on the same page and rule.
 - **Invariant:** `reserved <= bond`. Every open challenge holds exactly one `payout` in `reserved`.
 - **`pool`:** a cumulative counter of lost stakes. The stakes themselves are credited to the challenged pledge's bond.
-- **Deviation from SPEC 4.3:**
+- **Fields added to the original design:**
   - `Pledge.created_at` is added as the last field; the rule "snapshot >= pledge creation" needs it.
   - `Challenge.judged_ts` records the capture actually judged.
 

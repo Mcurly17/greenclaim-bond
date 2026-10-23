@@ -1,4 +1,4 @@
-"""Direct mode tests for contracts/green_claim_bond.py (SPEC section 4.7)."""
+"""Direct mode tests for contracts/green_claim_bond.py."""
 
 import datetime
 import json
