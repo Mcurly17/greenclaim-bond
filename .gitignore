@@ -1,0 +1,41 @@
+# Private working notes
+SPEC.md
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+*.keystore.json
+keypair.json
+*.pem
+
+# Python environments, bytecode and test outputs
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.gltest_cache/
+artifacts/
+
+# Node
+node_modules/
+*.compiled.js
+/frontend/.next
+/frontend/next-env.d.ts
+/frontend/bun.lock
+/frontend/package-lock.json
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+/context

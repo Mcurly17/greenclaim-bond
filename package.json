@@ -1,0 +1,17 @@
+{
+  "name": "greenclaim-bond",
+  "type": "module",
+  "private": true,
+  "workspaces": ["frontend"],
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm run start",
+    "lint": "cd frontend && npm run lint",
+    "deploy": "genlayer deploy",
+    "greenclaim": "node --env-file-if-exists=.env scripts/greenclaim.ts"
+  },
+  "devDependencies": {
+    "genlayer-js": "2.0.0-rc.2"
+  }
+}
