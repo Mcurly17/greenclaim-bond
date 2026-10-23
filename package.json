@@ -12,6 +12,7 @@
     "greenclaim": "node --env-file-if-exists=.env scripts/greenclaim.ts"
   },
   "devDependencies": {
-    "genlayer-js": "2.0.0-rc.2"
+    "genlayer-js": "1.1.8",
+    "genlayer-js-phase2": "npm:genlayer-js@2.0.0-rc.2"
   }
 }
