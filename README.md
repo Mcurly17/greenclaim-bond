@@ -178,6 +178,19 @@ Notes:
 - **Windows:** genlayer-test 0.29.2 cannot unlink its stdin temp file there. `tests/direct/conftest.py` swaps in a delete-on-close variant on `win32` only.
 - **Integration test:** `tests/integration/test_green_claim_bond.py` (real web and LLM, deploys a contract) skips unless `GREENCLAIM_IT_PAGE` and `GREENCLAIM_IT_QUOTE` are set. It has not been run yet.
 
+## Live demo
+
+"Demo Gourdes" is a fictional brand, served from [`docs/`](docs/) on GitHub Pages: static HTML, no JavaScript, and a "DEMO" banner on every page. Use these values for `create_pledge`:
+- **domain:** `mcurly17.github.io`
+- **pages:** the two product URLs below; their page indexes are 0 and 1.
+
+| Page | Sentence to challenge (rule R1) | Expected verdict |
+|---|---|---|
+| [gourde-verte.html](https://mcurly17.github.io/greenclaim-bond/gourde-verte.html) | `Notre gourde éco-responsable pour la planète.` | **UPHELD**: generic claim with no figure, label or explanation anywhere on the page |
+| [gourde-recyclee.html](https://mcurly17.github.io/greenclaim-bond/gourde-recyclee.html) | `Gourde éco-conçue : fabriquée à 100 % en acier inoxydable recyclé, certifiée EU Ecolabel.` | **REJECTED**: the claim is specified in the same sentence and the next paragraph (recycled share, EU Ecolabel licence number marked as fictional) |
+
+Snapshot each page with [Save Page Now](https://web.archive.org/save) **after** the pledge exists. The contract refuses captures older than the pledge, and it only follows redirects to captures taken between the pledge and the challenge.
+
 ## Deployments
 
 | Network | Address | Link |
