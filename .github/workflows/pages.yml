@@ -1,0 +1,70 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the static dApp
+        run: npm run build
+        env:
+          # Public values only. Empty repository variables fall back to Studionet.
+          NEXT_PUBLIC_CONTRACT_ADDRESS: ${{ vars.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x1f55BBf41a944666B287a802CC98c118e14f0932' }}
+          NEXT_PUBLIC_GENLAYER_RPC_URL: ${{ vars.NEXT_PUBLIC_GENLAYER_RPC_URL || 'https://studio.genlayer.com/api' }}
+          NEXT_PUBLIC_GENLAYER_CHAIN_ID: ${{ vars.NEXT_PUBLIC_GENLAYER_CHAIN_ID || '61999' }}
+          NEXT_PUBLIC_GENLAYER_CHAIN_NAME: ${{ vars.NEXT_PUBLIC_GENLAYER_CHAIN_NAME || 'GenLayer Studio' }}
+          NEXT_PUBLIC_GENLAYER_SYMBOL: ${{ vars.NEXT_PUBLIC_GENLAYER_SYMBOL || 'GEN' }}
+      # gourde-verte.html and gourde-recyclee.html are the pages of pledge 0 on the
+      # deployed contract: they must stay at the same URL, byte for byte.
+      - name: Add the Demo Gourdes pages
+        run: |
+          set -euo pipefail
+          out=frontend/out
+          test -f "$out/index.html"
+          for page in gourde-verte.html gourde-recyclee.html; do
+            test ! -e "$out/$page"
+            cp "docs/$page" "$out/$page"
+            cmp "docs/$page" "$out/$page"
+          done
+          printf '%s  %s\n' \
+            0eb9a68d78984b405cc6a63278efed9ecec685c58323f224486b2800c8f47a78 gourde-verte.html \
+            066b979bbee7983a8172789e0c2079049bcf1c3fccf66d18a2892b4bd6a7d73c gourde-recyclee.html \
+            | (cd "$out" && sha256sum -c -)
+          # The brand home moves to /demo/; only this generated copy is rewritten.
+          test ! -e "$out/demo"
+          mkdir "$out/demo"
+          sed 's|href="gourde-|href="../gourde-|g' docs/index.html > "$out/demo/index.html"
+          test "$(grep -o 'href="\.\./gourde-' "$out/demo/index.html" | wc -l)" -eq 2
+          if grep -q 'href="gourde-' "$out/demo/index.html"; then exit 1; fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,14 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { ConfigNotice } from "@/components/ConfigNotice";
+import { asset } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "GreenClaim Bond",
   description: "Bonded pledges against generic environmental claims, judged by GenLayer validators on immutable web snapshots.",
-  manifest: "/site.webmanifest",
+  // Metadata URLs are not prefixed with basePath by Next.js.
+  manifest: asset("/site.webmanifest"),
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: asset("/favicon.svg"), type: "image/svg+xml" },
     ],
   },
 };
@@ -25,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ConfigNotice />
         <Providers>
           {children}
         </Providers>

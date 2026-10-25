@@ -23,6 +23,8 @@ artifacts/
 node_modules/
 *.compiled.js
 /frontend/.next
+/frontend/out
+*.tsbuildinfo
 /frontend/next-env.d.ts
 /frontend/bun.lock
 /frontend/package-lock.json

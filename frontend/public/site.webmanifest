@@ -2,13 +2,14 @@
   "name": "GreenClaim Bond",
   "short_name": "GreenClaim",
   "description": "Bonded pledges against generic environmental claims on GenLayer",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#9B6AF6",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }

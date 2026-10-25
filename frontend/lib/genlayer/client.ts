@@ -2,22 +2,22 @@
 
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import { createWalletClient, custom, type WalletClient } from "viem";
+import type { GenLayerChain } from "genlayer-js/types";
+import { CONFIG } from "@/lib/config";
 
-// GenLayer Network Configuration (from environment variables with fallbacks)
-export const GENLAYER_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_GENLAYER_CHAIN_ID || "61999");
-export const GENLAYER_CHAIN_ID_HEX = `0x${GENLAYER_CHAIN_ID.toString(16).toUpperCase()}`;
+export const GENLAYER_CHAIN_ID = CONFIG.chainId;
+export const GENLAYER_CHAIN_ID_HEX = CONFIG.chainIdHex;
 
 export const GENLAYER_NETWORK = {
   chainId: GENLAYER_CHAIN_ID_HEX,
-  chainName: process.env.NEXT_PUBLIC_GENLAYER_CHAIN_NAME || "GenLayer Studio",
+  chainName: CONFIG.chainName,
   nativeCurrency: {
-    name: process.env.NEXT_PUBLIC_GENLAYER_SYMBOL || "GEN",
-    symbol: process.env.NEXT_PUBLIC_GENLAYER_SYMBOL || "GEN",
+    name: CONFIG.symbol,
+    symbol: CONFIG.symbol,
     decimals: 18,
   },
-  rpcUrls: [process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || "https://studio.genlayer.com/api"],
-  blockExplorerUrls: [],
+  rpcUrls: [CONFIG.rpcUrl],
+  blockExplorerUrls: [CONFIG.explorerUrl],
 };
 
 // Ethereum provider type from window
@@ -35,24 +35,10 @@ declare global {
 }
 
 /**
- * Get the GenLayer RPC URL from environment variables
+ * Get the GenLayer RPC URL used for reads, receipts and the wallet network entry.
  */
 export function getStudioUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || "https://studio.genlayer.com/api"
-  );
-}
-
-/**
- * Get the contract address from environment variables
- */
-export function getContractAddress(): string {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  if (!address) {
-    // Return empty string during build, error will be shown in UI during runtime
-    return "";
-  }
-  return address;
+  return CONFIG.rpcUrl;
 }
 
 /**
@@ -269,59 +255,25 @@ export async function switchAccount(): Promise<string> {
   }
 }
 
-/**
- * Create a viem wallet client from MetaMask provider
- */
-export function createMetaMaskWalletClient(): WalletClient | null {
-  const provider = getEthereumProvider();
-
-  if (!provider) {
-    return null;
-  }
-
-  try {
-    return createWalletClient({
-      chain: studionet as any,
-      transport: custom(provider),
-    });
-  } catch (error) {
-    console.error("Error creating wallet client:", error);
-    return null;
-  }
-}
-
-/**
- * Create a GenLayer client with MetaMask account
- *
- * Note: The genlayer-js SDK doesn't directly support custom transports like viem.
- * When an address is provided, the SDK will use the window.ethereum provider
- * automatically for transaction signing via MetaMask.
- */
-export function createGenLayerClient(address?: string) {
-  const config: any = {
-    chain: studionet,
+// genlayer-js 1.1.8 overwrites `chain.rpcUrls` when given an endpoint, so each
+// client gets its own copy instead of mutating the shared preset.
+function configuredChain(): GenLayerChain {
+  return {
+    ...studionet,
+    id: CONFIG.chainId,
+    rpcUrls: { default: { http: [CONFIG.rpcUrl] } },
+    blockExplorers: { default: { name: "GenLayer Studio Explorer", url: CONFIG.explorerUrl } },
   };
-
-  if (address) {
-    config.account = address as `0x${string}`;
-  }
-
-  try {
-    return createClient(config);
-  } catch (error) {
-    console.error("Error creating GenLayer client:", error);
-    // Return client without account on error
-    return createClient({
-      chain: studionet,
-    });
-  }
 }
 
 /**
- * Get a client instance with MetaMask account
+ * Create a GenLayer client on the configured RPC. With an address, signing
+ * requests go to the injected wallet (window.ethereum); no key is ever handled.
  */
-export async function getClient() {
-  const accounts = await getAccounts();
-  const address = accounts[0];
-  return createGenLayerClient(address);
+export function createGenLayerClient(address?: `0x${string}`) {
+  return createClient({
+    chain: configuredChain(),
+    endpoint: CONFIG.rpcUrl,
+    ...(address ? { account: address } : {}),
+  });
 }
