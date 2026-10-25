@@ -26,6 +26,7 @@ const APPLIED_STATUS = new Set(["ACCEPTED", "FINALIZED"]);
 const NOT_APPLIED_STATUS = new Set(["CANCELED", "UNDETERMINED", "LEADER_TIMEOUT", "VALIDATORS_TIMEOUT"]);
 
 export const UNCONFIRMED_MESSAGE = "Result not confirmed. Check the transaction in the explorer.";
+export const NO_CONSENSUS_MESSAGE = "Validators did not reach consensus. Nothing changed on-chain; you can retry.";
 
 type Loose = Record<string, any>;
 
@@ -103,14 +104,10 @@ export function interpretReceipt(receipt: unknown): ReceiptOutcome {
   // A leader SUCCESS is not enough: without agreement nothing was applied.
   const noConsensus =
     (consensus !== null && NO_CONSENSUS.has(consensus)) || (status !== null && NOT_APPLIED_STATUS.has(status));
+  // The leader's own error, if any, stays in errorCode; the message is the same for every
+  // consensus failure so it is never mistaken for the contract refusing the call.
   if (noConsensus) {
-    const why = `Validators did not reach agreement (${[status, consensus].filter(Boolean).join(", ")}). The contract state was not changed.`;
-    return {
-      ...fields,
-      kind: "failed",
-      failure: "consensus",
-      message: contractMessage ? `${why} Leader error: ${contractMessage}` : why,
-    };
+    return { ...fields, kind: "failed", failure: "consensus", message: NO_CONSENSUS_MESSAGE };
   }
 
   if ((execution !== null && !OK_EXECUTION.has(execution)) || rolledBack) {

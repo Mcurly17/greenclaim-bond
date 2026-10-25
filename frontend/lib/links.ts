@@ -22,6 +22,11 @@ export function waybackUrl(ts: string, page: string): string {
   return `https://web.archive.org/web/${ts}id_/${page}`;
 }
 
+/** The same capture in the Wayback Machine viewer, for people rather than validators. */
+export function waybackView(ts: string, page: string): string {
+  return `https://web.archive.org/web/${ts}/${page}`;
+}
+
 /** The Wayback Machine list of captures for a page. */
 export function waybackCalendar(page: string): string {
   return `https://web.archive.org/web/*/${page}`;

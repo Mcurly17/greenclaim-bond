@@ -5,7 +5,7 @@ import { ConfigNotice } from "@/components/ConfigNotice";
 import { asset } from "@/lib/config";
 
 export const metadata: Metadata = {
-  title: "GreenClaim Bond",
+  title: { default: "GreenClaim Bond", template: "%s · GreenClaim Bond" },
   description: "Bonded pledges against generic environmental claims, judged by GenLayer validators on immutable web snapshots.",
   // Metadata URLs are not prefixed with basePath by Next.js.
   manifest: asset("/site.webmanifest"),

@@ -1,88 +1,74 @@
 "use client";
 
-import { Navbar } from "@/components/Navbar";
+import { useState } from "react";
+import { Amount, Card, InternalLink, Pager } from "@/components/bits";
+import { PledgeTable } from "@/components/lists";
+import { QueryState } from "@/components/QueryState";
+import { Shell } from "@/components/Shell";
+import { usePledges, useStats } from "@/lib/contracts/greenClaim";
+
+function Stats() {
+  const stats = useStats();
+  return (
+    <QueryState query={stats} loadingLabel="Reading contract statistics…">
+      {(s) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card>
+            <p className="text-xs uppercase text-muted-foreground">Pledges</p>
+            <p className="mt-1 text-3xl font-semibold">{s.pledges}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase text-muted-foreground">Challenges</p>
+            <p className="mt-1 text-3xl font-semibold">
+              <InternalLink href="/challenges/">{s.challenges}</InternalLink>
+            </p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase text-muted-foreground">Stakes kept in bonds</p>
+            <p className="mt-1 text-2xl font-semibold">
+              <Amount value={s.pool} />
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">From rejected and quote-not-found challenges</p>
+          </Card>
+        </div>
+      )}
+    </QueryState>
+  );
+}
+
+function Pledges() {
+  const [page, setPage] = useState(0);
+  const pledges = usePledges(page);
+  return (
+    <Card title="Pledges">
+      <QueryState query={pledges} loadingLabel="Reading pledges…">
+        {(result) => (
+          <>
+            <PledgeTable pledges={result.items} empty="No pledge yet." />
+            <Pager page={page} pageCount={result.pageCount} onPage={setPage} />
+          </>
+        )}
+      </QueryState>
+    </Card>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Navbar */}
-      <Navbar />
-
-      {/* Main Content - Padding to account for fixed navbar */}
-      <main className="flex-grow pt-20 pb-12 px-4 md:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center mb-8 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-              GreenClaim Bond
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Bonded pledges against generic environmental claims, judged by
-              GenLayer validators on immutable Wayback Machine snapshots.
-            </p>
-          </div>
-
-          {/* Info Section */}
-          <div className="mt-8 glass-card p-6 md:p-8 animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <h2 className="text-2xl font-bold mb-4">How it Works</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <div className="text-accent font-bold text-lg">1. Pledge</div>
-                <p className="text-sm text-muted-foreground">
-                  A brand lists up to 5 product pages and locks a GEN bond, pledging
-                  they contain no generic, unsubstantiated environmental claim.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="text-accent font-bold text-lg">2. Challenge</div>
-                <p className="text-sm text-muted-foreground">
-                  Anyone can stake a small amount on one exact sentence, one fixed
-                  rule (R1, R2 or R3) and one Wayback snapshot.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="text-accent font-bold text-lg">3. Resolve</div>
-                <p className="text-sm text-muted-foreground">
-                  Validators re-read the snapshot, check the quote and judge the
-                  sentence. An upheld challenge is paid from the bond.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-2">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-              <a
-                href="https://genlayer.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                Powered by GenLayer
-              </a>
-              <a
-                href="https://studio.genlayer.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                Studio
-              </a>
-              <a
-                href="https://docs.genlayer.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent transition-colors"
-              >
-                Docs
-              </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+    <Shell>
+      <div className="mb-8">
+        <h1 className="mb-3 text-3xl font-bold md:text-4xl">GreenClaim Bond</h1>
+        <p className="max-w-3xl text-muted-foreground">
+          A brand lists product pages and locks a bond, pledging they contain no generic environmental claim, offset-based
+          climate claim or unofficial sustainability label. Anyone can challenge one exact sentence on an archived
+          snapshot; GenLayer validators re-read the snapshot and judge it against one{" "}
+          <InternalLink href="/rules/">fixed rule</InternalLink>. An upheld challenge is paid from the bond.
+        </p>
+      </div>
+      <div className="space-y-6">
+        <Stats />
+        <Pledges />
+      </div>
+    </Shell>
   );
 }

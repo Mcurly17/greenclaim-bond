@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { AccountPanel } from "./AccountPanel";
 import { Logo, LogoMark } from "./Logo";
+
+const NAV: [string, string][] = [
+  ["/", "Pledges"],
+  ["/challenges/", "Challenges"],
+  ["/rules/", "Rules"],
+];
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -79,11 +86,20 @@ export function Navbar() {
               style={{ height: `${headerHeight}px` }}
             >
               {/* Left: Logo */}
-              <div className="flex items-center gap-3">
-                {/* Show mark only on mobile, full logo on desktop */}
-                <LogoMark size="md" className="flex md:hidden" />
-                <Logo size="md" className="hidden md:flex" />
-                <span className="text-lg md:text-xl font-bold ml-2">GreenClaim Bond</span>
+              <div className="flex items-center gap-6">
+                <Link href="/" className="flex items-center gap-3">
+                  {/* Show mark only on mobile, full logo on desktop */}
+                  <LogoMark size="md" className="flex md:hidden" />
+                  <Logo size="md" className="hidden md:flex" />
+                  <span className="text-lg md:text-xl font-bold ml-2">GreenClaim Bond</span>
+                </Link>
+                <nav className="hidden sm:flex items-center gap-5 text-sm text-muted-foreground">
+                  {NAV.map(([href, label]) => (
+                    <Link key={href} href={href} className="hover:text-foreground transition-colors">
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
               </div>
 
               {/* Right: Actions */}

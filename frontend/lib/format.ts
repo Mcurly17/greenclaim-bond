@@ -68,7 +68,15 @@ export function formatUtc(value: string): string {
 export function formatLocal(value: string, locale?: string): string {
   const date = parseIsoUtc(value);
   if (!date) return value;
-  return date.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short", timeZoneName: "short" });
+  // dateStyle/timeStyle cannot be combined with timeZoneName: list the fields instead.
+  return date.toLocaleString(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
 }
 
 /** "20261023202211" -> "2026-10-23T20:22:11Z"; null if not a valid 14-digit timestamp. */

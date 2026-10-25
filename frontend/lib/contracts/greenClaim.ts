@@ -116,7 +116,13 @@ function usePaged<T>(counter: "pledges" | "challenges", page: number, fetchOne: 
       return { items, total: count, page, pageCount: pageCount(count) };
     },
   });
-  return { ...list, stats };
+  return withStats(list, stats);
+}
+
+/** A list depends on get_stats: surface its error and retry it, or the list waits forever. */
+function withStats<L extends { error: unknown; refetch: () => unknown }>(list: L, stats: { error: unknown; refetch: () => unknown }) {
+  if (!stats.error) return list;
+  return { ...list, error: stats.error, refetch: stats.refetch };
 }
 
 /** Pledges, newest first, PAGE_SIZE per page. */
@@ -148,7 +154,7 @@ export function useBrandPledges(brand: string | null) {
       return pledges.filter((p) => p.brand.toLowerCase() === (brand ?? "").toLowerCase());
     },
   });
-  return { ...list, stats };
+  return withStats(list, stats);
 }
 
 // ---------------------------------------------------------------------------

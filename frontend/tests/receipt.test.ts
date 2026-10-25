@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { interpretReceipt, isDecidedStatus, receiptStatus } from "../lib/contracts/receipt.ts";
+import { interpretReceipt, isDecidedStatus, NO_CONSENSUS_MESSAGE, receiptStatus } from "../lib/contracts/receipt.ts";
 
 // Real Studionet receipts (genlayer-js 1.1.8), heavy fields removed. See _source in the file.
 const fixtures = JSON.parse(readFileSync(new URL("./fixtures/studio-receipts.json", import.meta.url), "utf8"));
@@ -30,12 +30,12 @@ test("observed: resolve success decodes the returned status", () => {
   assert.equal(out.returnValue, "REJECTED");
 });
 
-test("observed: CANCELED + NO_MAJORITY + ERROR is a failure carrying the contract message", () => {
+test("observed: CANCELED + NO_MAJORITY + ERROR is a consensus failure, not a contract refusal", () => {
   const out = interpretReceipt(receipts.canceled_no_majority_llm_error);
   assert.equal(out.kind, "failed");
   assert.equal(out.failure, "consensus");
   assert.equal(out.errorCode, "LLM_ERROR");
-  assert.match(out.message ?? "", /\[LLM_ERROR\] invalid source classification/);
+  assert.equal(out.message, NO_CONSENSUS_MESSAGE);
 });
 
 test("observed: leader SUCCESS without consensus (CANCELED + NO_MAJORITY) is a failure", () => {
@@ -43,7 +43,7 @@ test("observed: leader SUCCESS without consensus (CANCELED + NO_MAJORITY) is a f
   assert.equal(out.execution, "SUCCESS");
   assert.equal(out.kind, "failed");
   assert.equal(out.failure, "consensus");
-  assert.match(out.message ?? "", /NO_MAJORITY/);
+  assert.equal(out.message, NO_CONSENSUS_MESSAGE);
 });
 
 test("observed: FINALIZED + NO_MAJORITY without a leader receipt is a failure", () => {
@@ -76,6 +76,7 @@ test("agreed contract error surfaces the [EXPECTED] message (payload, then raw b
   assert.equal(withPayload.failure, "execution");
   assert.equal(withPayload.message, message);
   assert.equal(withPayload.errorCode, "EXPECTED");
+  assert.notEqual(withPayload.message, NO_CONSENSUS_MESSAGE);
 
   const raw = btoa(String.fromCharCode(1) + String.fromCharCode(...new TextEncoder().encode(message)));
   const withRaw = interpretReceipt({
@@ -104,6 +105,7 @@ test("UNDETERMINED is never a success, even with a SUCCESS leader", () => {
   });
   assert.equal(out.kind, "failed");
   assert.equal(out.failure, "consensus");
+  assert.equal(out.message, NO_CONSENSUS_MESSAGE);
 });
 
 test("MAJORITY_DISAGREE is a failure", () => {

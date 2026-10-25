@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  formatLocal,
   formatUtc,
   formatWei,
   isoToSnapshot,
@@ -67,6 +68,13 @@ test("dates: strict ISO UTC and 14-digit snapshots", () => {
   assert.equal(snapshotToIso("20261332000000"), null);
   assert.equal(snapshotToIso("2026102320221"), null);
   assert.equal(isoToSnapshot("2026-10-23T20:20:56Z"), "20261023202056");
+});
+
+test("formatLocal renders a local time with its zone and never throws", () => {
+  const text = formatLocal("2026-10-23T20:22:11Z", "en-GB");
+  assert.match(text, /2026/);
+  assert.match(text, /GMT|UTC|[A-Z]{3,4}/);
+  assert.equal(formatLocal("not a date"), "not a date");
 });
 
 test("shortAddress", () => {
