@@ -7,7 +7,7 @@ Everything around that single judgment (money, deadlines, quote matching, URL co
 
 | Layer | Owns |
 |---|---|
-| Frontend / backend (later) | UI, finding or creating Wayback snapshots, indexing, previews |
+| Frontend (`frontend/`) | Reads the contract and sends the six writes through the injected wallet. It does not judge a sentence and it does not hold a key. A success is shown only from an accepted receipt. |
 | **GenLayer contract** | pledges, bonds, stakes, deadlines, the evidence URL, the validator comparison rule, settlement, `standing()` |
 | External source | Wayback Machine snapshot bytes (immutable, re-fetched independently by every validator) |
 

@@ -28,3 +28,24 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: pytest tests/direct/ -v
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:frontend
+      - name: Build the static export
+        run: npm run build
+        env:
+          NEXT_PUBLIC_CONTRACT_ADDRESS: "0x1f55BBf41a944666B287a802CC98c118e14f0932"
+          NEXT_PUBLIC_GENLAYER_RPC_URL: "https://studio.genlayer.com/api"
+          NEXT_PUBLIC_GENLAYER_CHAIN_ID: "61999"
+          NEXT_PUBLIC_GENLAYER_CHAIN_NAME: "GenLayer Studio"
+          NEXT_PUBLIC_GENLAYER_SYMBOL: "GEN"

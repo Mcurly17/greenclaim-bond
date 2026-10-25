@@ -1,28 +1,50 @@
-# GreenClaim Bond - frontend
+# GreenClaim Bond frontend
 
-Next.js shell kept from the GenLayer boilerplate (wallet connection, layout, UI kit).
-The GreenClaim Bond screens (pledge registry, challenge form, decision history) are not written yet.
+Static dApp for the [GreenClaim Bond](../README.md) contract. It reads pledges and challenges from the public RPC and sends `create_pledge`, `top_up`, `challenge`, `resolve`, `expire` and `withdraw` through the visitor's injected wallet (`window.ethereum`). Any wallet that supports custom EVM networks works. The frontend never sees a key, and it shows a success only when the validators' receipt confirms one.
+
+The export is served under `/greenclaim-bond/`, which is the GitHub Pages path of this repository: [mcurly17.github.io/greenclaim-bond](https://mcurly17.github.io/greenclaim-bond/).
+
+## Pages
+
+| Page | What it shows |
+|---|---|
+| `/` | Pledge count, pool, and the pledges, newest first |
+| `/pledge/?id=` | One pledge, its pages, its challenges, and the actions the visitor can sign |
+| `/challenges/` | Every challenge, newest first |
+| `/challenge/?id=` | One challenge, the rule, the Wayback capture, and resolve or expire |
+| `/brand/?address=` | One brand's standing and pledges |
+| `/rules/` | Rules R1, R2 and R3, verbatim from the contract |
+| `/create/` | The pledge form |
+
+A missing id, an unknown id, an RPC failure and a missing contract address each have their own state. The RPC failure offers a Retry button. A read that does not answer within 20 seconds becomes that failure instead of spinning.
 
 ## Setup
 
-```bash
+```powershell
+cd frontend
+copy .env.example .env.local
 npm install
-cp .env.example .env
 ```
 
-Environment variables:
-- `NEXT_PUBLIC_GENLAYER_RPC_URL` - GenLayer RPC (default: https://studio.genlayer.com/api)
-- `NEXT_PUBLIC_GENLAYER_CHAIN_ID`, `NEXT_PUBLIC_GENLAYER_CHAIN_NAME`, `NEXT_PUBLIC_GENLAYER_SYMBOL`
-- `NEXT_PUBLIC_CONTRACT_ADDRESS` - deployed GreenClaimBond contract address
+`.env.local` is gitignored. Every value in it is public:
 
-## Development
+- `NEXT_PUBLIC_CONTRACT_ADDRESS`
+- `NEXT_PUBLIC_GENLAYER_RPC_URL` (Studionet: `https://studio.genlayer.com/api`)
+- `NEXT_PUBLIC_GENLAYER_CHAIN_ID` (`61999`), `NEXT_PUBLIC_GENLAYER_CHAIN_NAME`, `NEXT_PUBLIC_GENLAYER_SYMBOL`
 
-```bash
-npm run dev
+## Scripts
+
+```powershell
+npm run dev      # http://localhost:3000/greenclaim-bond/
+npm run lint     # tsc --noEmit
+npm test         # node --test, Node 22
+npm run build    # static export in out/, then scripts/check-export.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+From the repository root the same scripts are `npm run dev`, `npm run lint`, `npm run test:frontend` and `npm run build`.
 
-## Tech Stack
+Adding `?checks=off` to a page shows every action and skips the client-side checks, so a deliberate contract refusal can be signed. It is active only while `NODE_ENV` is `development`. The exported site drops it, and `scripts/check-export.mjs` fails the build if any of that code remains in `out/`.
 
-Next.js, TypeScript, Tailwind CSS v4, genlayer-js, TanStack Query, Radix UI / shadcn/ui.
+## Stack
+
+Next.js 16 (static export), TypeScript, Tailwind CSS 4, genlayer-js 1.1.8, TanStack Query, Radix UI.

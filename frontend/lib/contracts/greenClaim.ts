@@ -13,7 +13,7 @@ import {
   NO_WALLET_MESSAGE,
   switchToGenLayerNetwork,
 } from "@/lib/genlayer/client";
-import { classifyReadError, GreenClaimReadError, isWalletRejection, withTimeout } from "./errors";
+import { classifyReadError, GreenClaimReadError, isWalletRejection, withTimeout, wrongChainMessage } from "./errors";
 import { interpretReceipt, isDecidedStatus, receiptStatus, UNCONFIRMED_MESSAGE, type ReceiptOutcome } from "./receipt";
 import type { ChallengeView, PledgeView, ReadMethod, Standing, Stats, WriteMethod } from "./types";
 
@@ -234,15 +234,8 @@ async function ensureWalletChain(): Promise<void> {
   } catch (err) {
     switchError = err;
   }
-  const after = await walletChainId();
-  if (after !== CONFIG.chainIdHex) {
-    const current = after ? parseInt(after, 16) : "unknown";
-    throw new WritePreflightError(
-      "wrong_chain",
-      `Nothing was sent: your wallet is on chain ${current}. Switch it to ${CONFIG.chainName} (chain ${CONFIG.chainId}) and try again.`,
-      switchError,
-    );
-  }
+  const blocked = wrongChainMessage(await walletChainId(), CONFIG);
+  if (blocked) throw new WritePreflightError("wrong_chain", blocked, switchError);
 }
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));

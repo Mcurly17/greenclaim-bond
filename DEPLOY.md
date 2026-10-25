@@ -177,3 +177,20 @@ Fill the README "Deployments" table:
 - if deployed, the Bradbury address and explorer links for the deploy and resolve transactions.
 
 The "Intelligent Contracts" submission accepts the GitHub repo, the Studio link and the Studio explorer link. A Bradbury deployment is optional.
+
+## 4. Frontend / GitHub Pages
+
+The dApp is a static export. From the repository root, with the public values in `frontend/.env.local` (copy `frontend/.env.example`; never commit it):
+
+```powershell
+npm ci
+npm run lint
+npm run test:frontend
+npm run build
+```
+
+`npm run build` writes `frontend/out` and then checks that the development-only `?checks=off` mode is absent from the export. Signing happens in the visitor's wallet. The build needs no private key and no secret.
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) builds that export on a push to `main` and deploys it with GitHub Actions. It reads public repository variables only and falls back to the Studionet values. The two Demo Gourdes pages are copied from `docs/` into the export so the URLs stored in pledge 0 stay valid. The site address is [mcurly17.github.io/greenclaim-bond](https://mcurly17.github.io/greenclaim-bond/).
+
+Publishing that build requires the repository's Pages source to be "GitHub Actions". That is a setting changed by hand; nothing in this repository changes it.

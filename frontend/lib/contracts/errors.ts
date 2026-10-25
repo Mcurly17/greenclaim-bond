@@ -54,6 +54,19 @@ export function resultErrorText(result: unknown): string | null {
   return null;
 }
 
+/**
+ * Message shown when a write is blocked because the wallet is not on the expected chain.
+ * Null when `currentHex` already matches, so nothing is sent and nothing is asked.
+ */
+export function wrongChainMessage(
+  currentHex: string | null,
+  expected: { chainIdHex: string; chainName: string; chainId: number },
+): string | null {
+  if (currentHex === expected.chainIdHex) return null;
+  const current = currentHex !== null && /^0x[0-9a-f]+$/.test(currentHex) ? parseInt(currentHex, 16) : "unknown";
+  return `Nothing was sent: your wallet is on chain ${current}. Switch it to ${expected.chainName} (chain ${expected.chainId}) and try again.`;
+}
+
 export type ReadErrorKind = "config" | "not_found" | "contract" | "rpc";
 
 export class GreenClaimReadError extends Error {

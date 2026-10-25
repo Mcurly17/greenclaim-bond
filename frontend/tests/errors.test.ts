@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { classifyReadError, decodeResultBase64, GreenClaimReadError, isWalletRejection, withTimeout } from "../lib/contracts/errors.ts";
+import { classifyReadError, decodeResultBase64, GreenClaimReadError, isWalletRejection, withTimeout, wrongChainMessage } from "../lib/contracts/errors.ts";
 
 const fixtures = JSON.parse(readFileSync(new URL("./fixtures/studio-receipts.json", import.meta.url), "utf8"));
 
@@ -48,6 +48,16 @@ test("a read that never answers fails after the timeout, and a fast answer wins"
     return true;
   });
   assert.equal(await withTimeout(Promise.resolve("ok"), 30, () => timeout), "ok");
+});
+
+test("a wallet already on Studionet is not blocked; any other chain is, and nothing is sent", () => {
+  const studionet = { chainIdHex: "0xf22f", chainName: "GenLayer Studio", chainId: 61999 };
+  assert.equal(wrongChainMessage("0xf22f", studionet), null);
+  assert.equal(
+    wrongChainMessage("0x1", studionet),
+    "Nothing was sent: your wallet is on chain 1. Switch it to GenLayer Studio (chain 61999) and try again.",
+  );
+  assert.match(wrongChainMessage(null, studionet) ?? "", /chain unknown/);
 });
 
 test("wallet refusal (EIP-1193 4001) is detected through the cause chain", () => {

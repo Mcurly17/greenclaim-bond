@@ -1,5 +1,7 @@
 # GreenClaim Bond
 
+This repository is a complete project: the GreenClaim Bond Intelligent Contract, and a static dApp that reads it and sends every transaction through the visitor's own wallet.
+
 **A bonded anti-greenwashing pledge, settled by GenLayer validators on immutable web snapshots.**
 
 Since 27 September 2026, [Directive (EU) 2024/825](https://eur-lex.europa.eu/eli/dir/2024/825/oj/eng) bans generic environmental claims ("eco-friendly", "green", "carbon neutral thanks to offsetting", home-made sustainability labels).
@@ -42,7 +44,7 @@ flowchart LR
   state --> settle["Settlement: pay challenger or credit the bond"]
 ```
 
-**Frontend:** `frontend/` is a placeholder. It is the generic Next.js shell from the boilerplate, rebranded, and it does not call the contract yet. Interaction today goes through `scripts/greenclaim.ts` and the `genlayer` CLI.
+**Frontend.** [`frontend/`](frontend/) is a static dApp (Next.js, `output: "export"`, served under `/greenclaim-bond/`). It reads the contract on the public RPC and sends writes through the injected wallet; it never holds a key, and it shows a success only when the receipt is accepted by the validators. The same calls can still be made from the command line with [`scripts/greenclaim.ts`](scripts/greenclaim.ts). Details: [`frontend/README.md`](frontend/README.md).
 
 ## Methods
 
@@ -205,6 +207,34 @@ Settlement, checked against on-chain balances:
 - the REJECTED challenge's 0.01 GEN stake went to the bond, which now holds 0.21 GEN;
 - `standing` shows 1 upheld and 1 rejected for the brand.
 
+## Live demo on Studionet
+
+The static dApp is built for [mcurly17.github.io/greenclaim-bond](https://mcurly17.github.io/greenclaim-bond/). That address still serves the Demo Gourdes pages until the repository's Pages source is switched to GitHub Actions, which is a setting changed by hand ([DEPLOY.md](DEPLOY.md)). Contract [`0x1f55BBf41a944666B287a802CC98c118e14f0932`](https://explorer-studio.genlayer.com/address/0x1f55BBf41a944666B287a802CC98c118e14f0932) on Studionet (chain 61999): [open it in Studio](https://studio.genlayer.com/?import-contract=0x1f55BBf41a944666B287a802CC98c118e14f0932).
+
+On 25 October 2026 two throwaway Studionet accounts, used only on this testnet, ran the dApp against pledge 1 "Demo gourde test" (bond 0.2 GEN, payout 0.1 GEN, one day, the gourde-verte page). A is the brand, B is the challenger.
+
+| Account | Address |
+|---|---|
+| A, brand | [`0xf5Fe96d6…483dFF`](https://explorer-studio.genlayer.com/address/0xf5Fe96d62733d40f25822b20C5E46A0E17483dFF) |
+| B, challenger | [`0x74115084…E7BC56`](https://explorer-studio.genlayer.com/address/0x74115084812fc662AaAE47B5Fd4Ef60cd5E7BC56) |
+
+| Step | Call | Transaction | Result read back |
+|---|---|---|---|
+| A creates the pledge | `create_pledge`, 0.2 GEN | [`0x7d369eba…37723e`](https://explorer-studio.genlayer.com/tx/0x7d369eba4c879f58a49a56eb45758eb13de49513ac88915a3328badaea37723e) | Success. The receipt returns pledge 1 |
+| A tops up the bond | `top_up`, 0.05 GEN | [`0x17c55d7b…cffb3e`](https://explorer-studio.genlayer.com/tx/0x17c55d7b1f4935e703dd53259a28217022ea2272664d58aabc87a128fbcffb3e) | Success. Bond read back at 0.25 GEN |
+| A challenges its own pledge | `challenge`, 0.01 GEN | [`0x4da6d8df…8a3168`](https://explorer-studio.genlayer.com/tx/0x4da6d8df27b9c4fb749d3d1d48d815bac6b0768b779086a990552d51b98a3168) | Contract refusal, shown as-is: `[EXPECTED] the brand cannot challenge its own pledge`. Studionet kept the 0.01 GEN in the contract balance |
+| A withdraws before the end | `withdraw` | [`0x30b3c36e…dd742d`](https://explorer-studio.genlayer.com/tx/0x30b3c36eeb2aaa2f95ae9983be530188ab8ff09f996af2209eae016027dd742d) | `[EXPECTED] coverage has not ended`. Nothing moved |
+| B challenges a real sentence | `challenge`, stake 0.01 GEN, capture [`20261025164907`](https://web.archive.org/web/20261025164907id_/https://mcurly17.github.io/greenclaim-bond/gourde-verte.html) | [`0x12e52b00…d2bdec`](https://explorer-studio.genlayer.com/tx/0x12e52b0085e8f02e5083388be6fa753c761acf3390e57eceb693f17b08d2bdec) | Success. The receipt returns challenge 2 |
+| Anyone resolves it | `resolve` | [`0xd04f00fa…4cc67e`](https://explorer-studio.genlayer.com/tx/0xd04f00fac8be285cf8f2b29f8f384096c641c4b3527a593c43b84b7b654cc67e) | Success. The receipt returns `UPHELD`, and reading the challenge confirms it. The bond is 0.15 GEN, with nothing reserved |
+
+Refusing the signature in the wallet shows only "Cancelled in your wallet." A successful withdraw and a successful expire were not run: coverage lasts at least one day.
+
+![Pledge list](assets/screenshots/home.png)
+![Pledge 1](assets/screenshots/pledge.png)
+![Challenge 2, upheld](assets/screenshots/challenge.png)
+![Create a pledge](assets/screenshots/create.png)
+![Rules](assets/screenshots/rules.png)
+
 ## Deployments
 
 | Network | Address | Link |
@@ -249,6 +279,9 @@ On Studionet, the same flow runs end to end with `gltest tests/integration/ -v -
   - Redirects to a nearby capture are accepted, so the judged capture can differ from the requested timestamp. It always stays between the pledge's creation and the challenge's opening; anything else settles QUOTE_NOT_FOUND. The capture actually judged is shown as `judged_ts`.
   - Archive rate limits can delay resolution, which is why the 3-day window and `expire()` exist.
 - **Views scan all challenges.** `standing` and `list_challenges` are O(n), which is fine for views. A frontend indexer is the scalable path.
+- **A refused payable call keeps its value on Studionet.** The network credits the message value before the contract runs and does not refund it when the call reverts. That GEN stays in the contract balance, outside every bond and outside the challenger pool, and no method returns it. The dApp says so when the receipt reports the value as credited. The same loss happens outside the development-only test mode: a challenge can still be refused after it was signed, because another challenge on the same page and rule was opened in between, or because coverage ended while the transaction was sent.
+- **Wrong network.** When the wallet is on another chain, the dApp asks it to switch to Studionet (chain 61999) and sends nothing if it is still elsewhere. That block is covered by tests. It could not be checked with Rabby, which remembers the network separately for each site.
+- **Withdraw and expire were not run live.** Coverage lasts at least one day, so the Studionet run above contains neither a successful withdraw nor a successful expire. Unit tests cover when the dApp offers those buttons.
 - **Runner pin.** The runner hash is pinned to the version documented in the GenLayer skills (SDK v0.2 API, `run_nondet_unsafe`). The linter reports a newer runner (v0.3 API), and migrating needs code changes.
 
 ## Credits
