@@ -1,39 +1,12 @@
 @import "tailwindcss";
 
-/* GenLayer Brand Guidelines 2025 - Typography via local fonts */
-/* --font-body / --font-display: Switzer */
-/* Relative URLs: the bundler emits the files under the export basePath. */
-
-@font-face {
-  font-family: 'Switzer';
-  src: url('./fonts/Switzer-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Switzer';
-  src: url('./fonts/Switzer-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Switzer';
-  src: url('./fonts/Switzer-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 @custom-variant dark (&:is(.dark *));
 
 /* GenLayer Brand Colors 2025 */
 :root {
-  --font-body: 'Switzer';
-  --font-display: 'Switzer';
+  /* System font stack: no web font is downloaded. */
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-display: var(--font-body);
 
   /* Base colors - keep black background for dark theme */
   --background: oklch(0 0 0);
@@ -179,12 +152,12 @@
 
   body {
     @apply text-foreground;
-    font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-family: var(--font-body);
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display), var(--font-body), sans-serif;
+    font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: 0;
   }
