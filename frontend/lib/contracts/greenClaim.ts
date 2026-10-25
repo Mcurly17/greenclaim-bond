@@ -5,15 +5,15 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import type { TransactionHash } from "genlayer-js/types";
 import { CONFIG } from "@/lib/config";
 import { formatGen } from "@/lib/format";
-import { studioFaucet } from "@/lib/links";
 import { mapLimit, pageCount, pageIds, PAGE_SIZE } from "@/lib/paging";
 import {
   createGenLayerClient,
   getAccounts,
   getEthereumProvider,
+  NO_WALLET_MESSAGE,
   switchToGenLayerNetwork,
 } from "@/lib/genlayer/client";
-import { classifyReadError, GreenClaimReadError } from "./errors";
+import { classifyReadError, GreenClaimReadError, isWalletRejection, withTimeout } from "./errors";
 import { interpretReceipt, isDecidedStatus, receiptStatus, UNCONFIRMED_MESSAGE, type ReceiptOutcome } from "./receipt";
 import type { ChallengeView, PledgeView, ReadMethod, Standing, Stats, WriteMethod } from "./types";
 
@@ -22,6 +22,8 @@ const ROOT_KEY = "greenclaim";
 /** Studionet allows about 60 requests per minute; list pages stay well below. */
 const READ_CONCURRENCY = 3;
 const ITEM_STALE_MS = 30_000;
+/** A read that never answers must not leave the page on "Reading…" forever. */
+const READ_TIMEOUT_MS = 20_000;
 
 /** Read arguments are small ids and strings, so query keys never hold a bigint. */
 export type ReadArg = string | number;
@@ -38,7 +40,11 @@ export async function readGreenClaim<T>(functionName: ReadMethod, args: ReadArg[
   const address = contract();
   readClient ??= createGenLayerClient();
   try {
-    return (await readClient.readContract({ address, functionName, args, jsonSafeReturn: true })) as T;
+    return (await withTimeout(
+      readClient.readContract({ address, functionName, args, jsonSafeReturn: true }) as Promise<T>,
+      READ_TIMEOUT_MS,
+      () => new GreenClaimReadError("rpc", "No answer from the contract after 20 seconds.", null, false),
+    )) as T;
   } catch (err) {
     throw classifyReadError(err);
   }
@@ -50,7 +56,7 @@ function key(functionName: ReadMethod | string, ...args: ReadArg[]): ReadArg[] {
 
 /** Retries RPC failures only: "unknown pledge" or a business error will not change. */
 function retryRpc(failureCount: number, err: unknown): boolean {
-  return err instanceof GreenClaimReadError && err.kind === "rpc" && failureCount < 2;
+  return err instanceof GreenClaimReadError && err.kind === "rpc" && err.retryable && failureCount < 2;
 }
 
 function isId(id: number | null | undefined): id is number {
@@ -190,9 +196,11 @@ export interface WriteResult {
   outcome: ReceiptOutcome;
 }
 
+export const CANCELLED_MESSAGE = "Cancelled in your wallet.";
+
 /** Raised before anything is sent: no wallet, wrong chain, low balance, or a refusal. */
 export class WritePreflightError extends Error {
-  reason: "no_contract" | "no_wallet" | "no_account" | "wrong_chain" | "insufficient_funds" | "send_failed";
+  reason: "no_contract" | "no_wallet" | "no_account" | "wrong_chain" | "insufficient_funds" | "cancelled" | "send_failed";
   cause?: unknown;
 
   constructor(reason: WritePreflightError["reason"], message: string, cause?: unknown) {
@@ -220,13 +228,19 @@ async function walletChainId(): Promise<string | null> {
  */
 async function ensureWalletChain(): Promise<void> {
   if ((await walletChainId()) === CONFIG.chainIdHex) return;
-  await switchToGenLayerNetwork();
+  let switchError: unknown = null;
+  try {
+    await switchToGenLayerNetwork();
+  } catch (err) {
+    switchError = err;
+  }
   const after = await walletChainId();
   if (after !== CONFIG.chainIdHex) {
     const current = after ? parseInt(after, 16) : "unknown";
     throw new WritePreflightError(
       "wrong_chain",
-      `Your wallet is on chain ${current}. Switch it to ${CONFIG.chainName} (chain ${CONFIG.chainId}) and try again.`,
+      `Nothing was sent: your wallet is on chain ${current}. Switch it to ${CONFIG.chainName} (chain ${CONFIG.chainId}) and try again.`,
+      switchError,
     );
   }
 }
@@ -266,6 +280,7 @@ export async function waitForOutcome(
     message: `No final result after ${Math.round(timeoutMs / 60_000)} minutes. ${UNCONFIRMED_MESSAGE}`,
     errorCode: null,
     returnValue: undefined,
+    keptValue: null,
   };
 }
 
@@ -277,7 +292,7 @@ export async function waitForOutcome(
 export async function writeGreenClaim(input: WriteInput, onProgress?: (p: WriteProgress) => void): Promise<WriteResult> {
   if (!CONFIG.contractAddress) throw new WritePreflightError("no_contract", "No contract configured.");
   if (!getEthereumProvider()) {
-    throw new WritePreflightError("no_wallet", "No browser wallet found. Install MetaMask or another injected wallet.");
+    throw new WritePreflightError("no_wallet", NO_WALLET_MESSAGE);
   }
   const [account] = await getAccounts();
   if (!account) throw new WritePreflightError("no_account", "Connect your wallet first.");
@@ -292,8 +307,7 @@ export async function writeGreenClaim(input: WriteInput, onProgress?: (p: WriteP
     if (balance < value) {
       throw new WritePreflightError(
         "insufficient_funds",
-        `This call sends ${formatGen(value.toString(), CONFIG.symbol)} but the account holds ${formatGen(balance.toString(), CONFIG.symbol)}. ` +
-          `Fund this test account with the faucet button in Studio's account selector (${studioFaucet()}).`,
+        `This call sends ${formatGen(value.toString(), CONFIG.symbol)} but the account holds ${formatGen(balance.toString(), CONFIG.symbol)}.`,
       );
     }
   }
@@ -310,6 +324,7 @@ export async function writeGreenClaim(input: WriteInput, onProgress?: (p: WriteP
       value,
     })) as string;
   } catch (err) {
+    if (isWalletRejection(err)) throw new WritePreflightError("cancelled", CANCELLED_MESSAGE, err);
     throw new WritePreflightError("send_failed", err instanceof Error ? err.message : "The wallet did not send the transaction.", err);
   }
   onProgress?.({ phase: "sent", hash });

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { User, LogOut, AlertCircle, ExternalLink } from "lucide-react";
 import { useWallet } from "@/lib/genlayer/wallet";
-import { success, error, userRejected } from "@/lib/utils/toast";
+import { WALLET_INSTALL_URL } from "@/lib/genlayer/client";
+import { error, userRejected } from "@/lib/utils/toast";
 import { AddressDisplay } from "./AddressDisplay";
 import { Button } from "./ui/button";
 import {
@@ -16,13 +17,11 @@ import {
 } from "./ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
-const METAMASK_INSTALL_URL = "https://metamask.io/download/";
-
 export function AccountPanel() {
   const {
     address,
     isConnected,
-    isMetaMaskInstalled,
+    hasWallet,
     isOnCorrectNetwork,
     isLoading,
     connectWallet,
@@ -36,7 +35,7 @@ export function AccountPanel() {
   const [isSwitching, setIsSwitching] = useState(false);
 
   const handleConnect = async () => {
-    if (!isMetaMaskInstalled) {
+    if (!hasWallet) {
       return;
     }
 
@@ -47,13 +46,13 @@ export function AccountPanel() {
       setIsModalOpen(false);
     } catch (err: any) {
       console.error("Failed to connect wallet:", err);
-      setConnectionError(err.message || "Failed to connect to MetaMask");
+      setConnectionError(err.message || "Failed to connect to your wallet");
 
       if (err.message?.includes("rejected")) {
         userRejected("Connection cancelled");
       } else {
         error("Failed to connect wallet", {
-          description: err.message || "Check your MetaMask and try again."
+          description: err.message || "Check your wallet and try again."
         });
       }
     } finally {
@@ -105,34 +104,34 @@ export function AccountPanel() {
               Connect to GenLayer
             </DialogTitle>
             <DialogDescription>
-              Connect your MetaMask wallet to pledge or challenge
+              Connect your browser wallet to pledge or challenge
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            {!isMetaMaskInstalled ? (
+            {!hasWallet ? (
               <>
                 <Alert variant="default" className="bg-accent/10 border-accent/20">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>MetaMask Not Detected</AlertTitle>
+                  <AlertTitle>No Wallet Detected</AlertTitle>
                   <AlertDescription>
-                    Please install MetaMask to continue. MetaMask is a crypto
-                    wallet that allows you to interact with blockchain applications.
+                    Install a browser wallet extension that supports custom EVM
+                    networks to sign transactions on this testnet.
                   </AlertDescription>
                 </Alert>
 
                 <Button
-                  onClick={() => window.open(METAMASK_INSTALL_URL, "_blank")}
+                  onClick={() => window.open(WALLET_INSTALL_URL, "_blank", "noopener")}
                   variant="gradient"
                   className="w-full h-14 text-lg"
                 >
                   <ExternalLink className="w-5 h-5 mr-2" />
-                  Install MetaMask
+                  Find a wallet
                 </Button>
 
                 <div className="p-4 rounded-lg bg-muted/10 border border-muted/20">
                   <p className="text-xs text-muted-foreground">
-                    After installing MetaMask, refresh this page and click
+                    After installing your wallet, refresh this page and click
                     &quot;Connect Wallet&quot; again.
                   </p>
                 </div>
@@ -146,7 +145,7 @@ export function AccountPanel() {
                   disabled={isConnecting}
                 >
                   <User className="w-5 h-5 mr-2" />
-                  {isConnecting ? "Connecting..." : "Connect MetaMask"}
+                  {isConnecting ? "Connecting..." : "Connect your wallet"}
                 </Button>
 
                 {connectionError && (
@@ -159,11 +158,11 @@ export function AccountPanel() {
 
                 <div className="p-4 rounded-lg bg-muted/10 border border-muted/20">
                   <p className="text-xs text-muted-foreground">
-                    This will open MetaMask and prompt you to:
+                    This will open your wallet and prompt you to:
                   </p>
                   <ol className="text-xs text-muted-foreground list-decimal list-inside mt-2 space-y-1">
                     <li>Connect your wallet to this application</li>
-                    <li>Add the GenLayer network to MetaMask</li>
+                    <li>Add the GenLayer network to your wallet</li>
                     <li>Switch to the GenLayer network</li>
                   </ol>
                 </div>
@@ -199,7 +198,7 @@ export function AccountPanel() {
             Wallet Details
           </DialogTitle>
           <DialogDescription>
-            Your connected MetaMask wallet information
+            Your connected wallet
           </DialogDescription>
         </DialogHeader>
 
@@ -233,7 +232,7 @@ export function AccountPanel() {
               <AlertTitle>Network Warning</AlertTitle>
               <AlertDescription>
                 You&apos;re not on the GenLayer network. Please switch networks in
-                MetaMask or try reconnecting.
+                your wallet or try reconnecting.
               </AlertDescription>
             </Alert>
           )}
@@ -270,9 +269,9 @@ export function AccountPanel() {
 
           <div className="p-4 rounded-lg bg-muted/10 border border-muted/20">
             <p className="text-xs text-muted-foreground">
-              Use &quot;Switch Account&quot; to select a different MetaMask
-              account. Use &quot;Disconnect&quot; to remove this site from
-              MetaMask.
+              Use &quot;Switch Account&quot; to select a different account in
+              your wallet. &quot;Disconnect&quot; only forgets the account on this
+              site; revoke the connection in your wallet to remove it there.
             </p>
           </div>
         </div>

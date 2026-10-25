@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { BrandActions, ChallengeForm } from "@/components/actions";
 import { Address, Amount, Card, ExternalLink, Facts, InternalLink, PledgePill, Time, useNow } from "@/components/bits";
 import { ChallengeTable } from "@/components/lists";
 import { Loading, NotFound, QueryState } from "@/components/QueryState";
@@ -64,10 +65,19 @@ function PledgeDetails({ pledge }: { pledge: PledgeView }) {
           </p>
         </Card>
 
+        <BrandActions pledge={pledge} />
+        <PledgeChallengeForm pledge={pledge} />
         <PledgeChallenges pledgeId={pledge.id} />
       </div>
     </>
   );
+}
+
+/** The form needs the open challenges to warn about duplicates; it waits for that list. */
+function PledgeChallengeForm({ pledge }: { pledge: PledgeView }) {
+  const challenges = useChallenges(pledge.id);
+  if (!challenges.data) return null;
+  return <ChallengeForm pledge={pledge} challenges={challenges.data} />;
 }
 
 function PledgeChallenges({ pledgeId }: { pledgeId: number }) {

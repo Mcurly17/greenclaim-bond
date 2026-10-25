@@ -2,14 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import {
-  isMetaMaskInstalled,
-  connectMetaMask,
+  hasInjectedWallet,
+  connectInjectedWallet,
   switchAccount,
   getAccounts,
   getCurrentChainId,
   isOnGenLayerNetwork,
   getEthereumProvider,
   GENLAYER_CHAIN_ID,
+  NO_WALLET_MESSAGE,
+  WALLET_INSTALL_URL,
 } from "./client";
 import { error, userRejected, warning } from "../utils/toast";
 
@@ -21,7 +23,8 @@ export interface WalletState {
   chainId: string | null;
   isConnected: boolean;
   isLoading: boolean;
-  isMetaMaskInstalled: boolean;
+  /** Any injected EIP-1193 wallet (window.ethereum), whatever its brand. */
+  hasWallet: boolean;
   isOnCorrectNetwork: boolean;
 }
 
@@ -44,14 +47,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     chainId: null,
     isConnected: false,
     isLoading: true,
-    isMetaMaskInstalled: false,
+    hasWallet: false,
     isOnCorrectNetwork: false,
   });
 
-  // Check MetaMask installation and load account on mount
+  // Detect an injected wallet and load its account on mount
   useEffect(() => {
     const initWallet = async () => {
-      const installed = isMetaMaskInstalled();
+      const installed = hasInjectedWallet();
 
       if (!installed) {
         setState({
@@ -59,14 +62,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           chainId: null,
           isConnected: false,
           isLoading: false,
-          isMetaMaskInstalled: false,
+          hasWallet: false,
           isOnCorrectNetwork: false,
         });
         return;
       }
 
       // Check if user intentionally disconnected
-      // If they did, don't auto-reconnect even if MetaMask has permissions
+      // If they did, don't auto-reconnect even if the wallet has permissions
       if (typeof window !== "undefined") {
         const wasDisconnected =
           localStorage.getItem(DISCONNECT_FLAG) === "true";
@@ -78,7 +81,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             chainId: null,
             isConnected: false,
             isLoading: false,
-            isMetaMaskInstalled: true,
+            hasWallet: true,
             isOnCorrectNetwork: false,
           });
           return;
@@ -87,7 +90,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       try {
         // Get current accounts (without requesting)
-        // This will auto-reconnect if MetaMask has existing permissions
+        // This will auto-reconnect if the wallet has existing permissions
         // and user didn't explicitly disconnect
         const accounts = await getAccounts();
         const chainId = await getCurrentChainId();
@@ -98,7 +101,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           chainId,
           isConnected: accounts.length > 0,
           isLoading: false,
-          isMetaMaskInstalled: true,
+          hasWallet: true,
           isOnCorrectNetwork: correctNetwork,
         });
       } catch (error) {
@@ -108,7 +111,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           chainId: null,
           isConnected: false,
           isLoading: false,
-          isMetaMaskInstalled: true,
+          hasWallet: true,
           isOnCorrectNetwork: false,
         });
       }
@@ -117,7 +120,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     initWallet();
   }, []);
 
-  // Set up MetaMask event listeners (ONCE for entire app)
+  // Set up wallet event listeners (ONCE for entire app)
   useEffect(() => {
     const provider = getEthereumProvider();
 
@@ -129,7 +132,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const chainId = await getCurrentChainId();
       const correctNetwork = await isOnGenLayerNetwork();
 
-      // If user connected via MetaMask UI, clear the disconnect flag
+      // If user connected from the wallet UI, clear the disconnect flag
       // This allows future auto-reconnects
       if (accounts.length > 0 && typeof window !== "undefined") {
         localStorage.removeItem(DISCONNECT_FLAG);
@@ -145,8 +148,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
 
     const handleChainChanged = async (chainId: string) => {
-      // MetaMask recommends reloading the page on chain change
-      // but we'll update state instead for better UX
+      // Update state in place rather than reloading the page
       const correctNetwork = parseInt(chainId, 16) === GENLAYER_CHAIN_ID;
       const accounts = await getAccounts();
 
@@ -181,13 +183,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Connect to MetaMask
+   * Connect the injected wallet
    */
   const connectWallet = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, isLoading: true }));
 
-      const address = await connectMetaMask();
+      const address = await connectInjectedWallet();
       const chainId = await getCurrentChainId();
       const correctNetwork = await isOnGenLayerNetwork();
 
@@ -202,7 +204,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         chainId,
         isConnected: true,
         isLoading: false,
-        isMetaMaskInstalled: true,
+        hasWallet: true,
         isOnCorrectNetwork: correctNetwork,
       });
 
@@ -214,17 +216,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Handle specific error types with appropriate toasts
       if (err.message?.includes("rejected")) {
         userRejected("Connection cancelled");
-      } else if (err.message?.includes("MetaMask is not installed")) {
-        error("MetaMask not found", {
-          description: "Please install MetaMask to connect your wallet.",
+      } else if (err.message === NO_WALLET_MESSAGE) {
+        error("No wallet found", {
+          description: NO_WALLET_MESSAGE,
           action: {
-            label: "Install MetaMask",
-            onClick: () => window.open("https://metamask.io/download/", "_blank")
+            label: "Find a wallet",
+            onClick: () => window.open(WALLET_INSTALL_URL, "_blank", "noopener")
           }
         });
       } else {
         error("Failed to connect wallet", {
-          description: err.message || "Please check your MetaMask and try again."
+          description: err.message || "Please check your wallet and try again."
         });
       }
 
@@ -251,14 +253,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Request user to switch to different MetaMask account
-   * Shows MetaMask account picker even if already connected
+   * Ask the wallet to pick a different account, even if already connected
    */
   const switchWalletAccount = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, isLoading: true }));
 
-      // Request account switch via MetaMask picker
+      // Request account switch via the wallet's picker
       const newAddress = await switchAccount();
 
       // Get updated state
@@ -277,7 +278,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         chainId,
         isConnected: true,
         isLoading: false,
-        isMetaMaskInstalled: true,
+        hasWallet: true,
         isOnCorrectNetwork: correctNetwork,
       });
 

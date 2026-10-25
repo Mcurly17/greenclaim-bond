@@ -9,6 +9,7 @@ const NAV: [string, string][] = [
   ["/", "Pledges"],
   ["/challenges/", "Challenges"],
   ["/rules/", "Rules"],
+  ["/create/", "Create a pledge"],
 ];
 
 export function Navbar() {

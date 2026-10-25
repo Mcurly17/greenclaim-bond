@@ -15,6 +15,7 @@ test("observed: create_pledge FINALIZED + MAJORITY_AGREE + SUCCESS is a success 
   assert.equal(out.execution, "SUCCESS");
   assert.equal(out.returnValue, 0);
   assert.equal(out.message, null);
+  assert.equal(out.keptValue, null, "a successful call's value is the bond, not a loss");
 });
 
 test("observed: the same receipt from waitForTransactionReceipt (snake_case) is a success too", () => {
@@ -65,26 +66,26 @@ test("camelCase receipt with FINISHED_WITH_ERROR is a failure", () => {
   assert.equal(out.failure, "execution");
 });
 
-test("agreed contract error surfaces the [EXPECTED] message (payload, then raw base64)", () => {
-  const message = "[EXPECTED] the brand cannot challenge its own pledge";
-  const withPayload = interpretReceipt({
-    statusName: "FINALIZED",
-    result_name: "MAJORITY_AGREE",
-    consensus_data: { leader_receipt: [{ execution_result: "ERROR", result: { status: "rollback", payload: message } }] },
-  });
-  assert.equal(withPayload.kind, "failed");
-  assert.equal(withPayload.failure, "execution");
-  assert.equal(withPayload.message, message);
-  assert.equal(withPayload.errorCode, "EXPECTED");
-  assert.notEqual(withPayload.message, NO_CONSENSUS_MESSAGE);
+test("observed: the brand challenging its own pledge is a contract refusal with the [EXPECTED] message as-is", () => {
+  const receipt = receipts.failed_expected_brand_self_challenge as any;
+  const out = interpretReceipt(receipt);
+  assert.equal(out.kind, "failed");
+  assert.equal(out.failure, "execution");
+  assert.equal(out.status, "FINALIZED");
+  assert.equal(out.consensus, "MAJORITY_AGREE");
+  assert.equal(out.execution, "ERROR");
+  assert.equal(out.errorCode, "EXPECTED");
+  assert.equal(out.message, "[EXPECTED] the brand cannot challenge its own pledge");
+  assert.notEqual(out.message, NO_CONSENSUS_MESSAGE);
+  // Observed: the 0.01 GEN stake was credited to the contract and not refunded.
+  assert.equal(out.keptValue, "10000000000000000");
+  assert.equal(interpretReceipt({ ...receipt, value_credited: false }).keptValue, null);
 
-  const raw = btoa(String.fromCharCode(1) + String.fromCharCode(...new TextEncoder().encode(message)));
-  const withRaw = interpretReceipt({
-    status_name: "ACCEPTED",
-    result_name: "MAJORITY_AGREE",
-    consensus_data: { leader_receipt: [{ execution_result: "ERROR", result: { status: "rollback", raw } }] },
-  });
-  assert.equal(withRaw.message, message);
+  // Same receipt without the decoded payload: the raw base64 (0x01 + message) is enough.
+  const leader = receipt.consensus_data.leader_receipt[0];
+  const rawOnly = structuredClone(receipt);
+  rawOnly.consensus_data.leader_receipt[0].result = { status: leader.result.status, raw: leader.result.raw };
+  assert.equal(interpretReceipt(rawOnly).message, out.message);
 });
 
 test("[TRANSIENT] revert keeps its code so the UI can say the challenge stays open", () => {

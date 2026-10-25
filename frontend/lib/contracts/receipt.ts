@@ -17,6 +17,11 @@ export interface ReceiptOutcome {
   errorCode: ContractErrorCode | null;
   /** Decoded return value of the call on success (e.g. the new pledge id). */
   returnValue: unknown;
+  /**
+   * Wei the receipt says were credited to the contract although the call failed.
+   * Studionet credits the message value before execution and does not refund it.
+   */
+  keptValue: string | null;
 }
 
 const OK_EXECUTION = new Set(["SUCCESS", "FINISHED_WITH_RETURN"]);
@@ -65,6 +70,14 @@ function decodeReturnValue(result: unknown): unknown {
   }
 }
 
+function creditedValue(r: Loose): string | null {
+  if ((r.value_credited ?? r.valueCredited) !== true) return null;
+  const v = r.value;
+  const wei =
+    typeof v === "bigint" ? v : typeof v === "number" && Number.isSafeInteger(v) ? BigInt(v) : typeof v === "string" && /^\d+$/.test(v) ? BigInt(v) : 0n;
+  return wei > 0n ? wei.toString() : null;
+}
+
 function leaderErrorText(lr: Loose | null): string | null {
   if (!lr) return null;
   return (
@@ -82,6 +95,7 @@ export function interpretReceipt(receipt: unknown): ReceiptOutcome {
     execution: null as string | null,
     errorCode: null as ContractErrorCode | null,
     returnValue: undefined as unknown,
+    keptValue: null as string | null,
   };
   if (!receipt || typeof receipt !== "object") {
     return { ...base, kind: "unconfirmed", failure: null, message: UNCONFIRMED_MESSAGE };
@@ -107,7 +121,7 @@ export function interpretReceipt(receipt: unknown): ReceiptOutcome {
   // The leader's own error, if any, stays in errorCode; the message is the same for every
   // consensus failure so it is never mistaken for the contract refusing the call.
   if (noConsensus) {
-    return { ...fields, kind: "failed", failure: "consensus", message: NO_CONSENSUS_MESSAGE };
+    return { ...fields, kind: "failed", failure: "consensus", message: NO_CONSENSUS_MESSAGE, keptValue: creditedValue(r) };
   }
 
   if ((execution !== null && !OK_EXECUTION.has(execution)) || rolledBack) {
@@ -115,6 +129,7 @@ export function interpretReceipt(receipt: unknown): ReceiptOutcome {
       ...fields,
       kind: "failed",
       failure: "execution",
+      keptValue: creditedValue(r),
       message: contractMessage ?? errorText ?? `The contract call failed (${execution ?? "rollback"}).`,
     };
   }

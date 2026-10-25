@@ -20,9 +20,8 @@ export const GENLAYER_NETWORK = {
   blockExplorerUrls: [CONFIG.explorerUrl],
 };
 
-// Ethereum provider type from window
+/** Any EIP-1193 provider injected by a browser wallet (Rabby, MetaMask, ...). */
 interface EthereumProvider {
-  isMetaMask?: boolean;
   request: (args: { method: string; params?: any[] }) => Promise<any>;
   on: (event: string, handler: (...args: any[]) => void) => void;
   removeListener: (event: string, handler: (...args: any[]) => void) => void;
@@ -41,31 +40,28 @@ export function getStudioUrl(): string {
   return CONFIG.rpcUrl;
 }
 
-/**
- * Check if MetaMask is installed
- */
-export function isMetaMaskInstalled(): boolean {
-  if (typeof window === "undefined") return false;
-  return !!window.ethereum?.isMetaMask;
+export const NO_WALLET_MESSAGE = "No browser wallet found. Install a wallet extension, then reload this page.";
+export const WALLET_INSTALL_URL = "https://ethereum.org/en/wallets/find-wallet/";
+
+/** True when any wallet injected window.ethereum; no wallet brand is checked. */
+export function hasInjectedWallet(): boolean {
+  return getEthereumProvider() !== null;
 }
 
-/**
- * Get the Ethereum provider (MetaMask)
- */
 export function getEthereumProvider(): EthereumProvider | null {
   if (typeof window === "undefined") return null;
   return window.ethereum || null;
 }
 
 /**
- * Request accounts from MetaMask
+ * Ask the wallet for access to its accounts.
  * @returns Array of addresses
  */
 export async function requestAccounts(): Promise<string[]> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error(NO_WALLET_MESSAGE);
   }
 
   try {
@@ -77,12 +73,12 @@ export async function requestAccounts(): Promise<string[]> {
     if (error.code === 4001) {
       throw new Error("User rejected the connection request");
     }
-    throw new Error(`Failed to connect to MetaMask: ${error.message}`);
+    throw new Error(`Failed to connect to your wallet: ${error.message}`);
   }
 }
 
 /**
- * Get current MetaMask accounts without requesting permission
+ * Get the wallet's current accounts without requesting permission
  * @returns Array of addresses
  */
 export async function getAccounts(): Promise<string[]> {
@@ -104,7 +100,7 @@ export async function getAccounts(): Promise<string[]> {
 }
 
 /**
- * Get the current chain ID from MetaMask
+ * Get the wallet's current chain ID
  */
 export async function getCurrentChainId(): Promise<string | null> {
   const provider = getEthereumProvider();
@@ -125,13 +121,13 @@ export async function getCurrentChainId(): Promise<string | null> {
 }
 
 /**
- * Add GenLayer network to MetaMask
+ * Add the GenLayer network to the wallet
  */
 export async function addGenLayerNetwork(): Promise<void> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error(NO_WALLET_MESSAGE);
   }
 
   try {
@@ -154,7 +150,7 @@ export async function switchToGenLayerNetwork(): Promise<void> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error(NO_WALLET_MESSAGE);
   }
 
   try {
@@ -190,12 +186,12 @@ export async function isOnGenLayerNetwork(): Promise<boolean> {
 }
 
 /**
- * Connect to MetaMask and ensure we're on GenLayer network
+ * Connect the injected wallet and ensure it is on the GenLayer network
  * @returns The connected address
  */
-export async function connectMetaMask(): Promise<string> {
-  if (!isMetaMaskInstalled()) {
-    throw new Error("MetaMask is not installed");
+export async function connectInjectedWallet(): Promise<string> {
+  if (!hasInjectedWallet()) {
+    throw new Error(NO_WALLET_MESSAGE);
   }
 
   // Request accounts
@@ -216,16 +212,15 @@ export async function connectMetaMask(): Promise<string> {
 }
 
 /**
- * Request user to switch MetaMask account
- * Shows MetaMask account picker even if already connected
- * Uses wallet_requestPermissions to force account selection dialog
+ * Ask the wallet to pick another account, even if already connected
+ * (wallet_requestPermissions opens the account selection dialog)
  * @returns The newly selected account address
  */
 export async function switchAccount(): Promise<string> {
   const provider = getEthereumProvider();
 
   if (!provider) {
-    throw new Error("MetaMask is not installed");
+    throw new Error(NO_WALLET_MESSAGE);
   }
 
   try {

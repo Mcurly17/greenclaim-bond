@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { ChallengeActions } from "@/components/actions";
 import { Address, Amount, Card, ChallengePill, ExternalLink, Facts, InternalLink, Time, useNow } from "@/components/bits";
 import { Loading, NotFound, QueryState } from "@/components/QueryState";
 import { Shell } from "@/components/Shell";
@@ -113,6 +114,8 @@ function ChallengeDetails({ challenge }: { challenge: ChallengeView }) {
           <p className="mt-4 text-sm">{CHALLENGE_SETTLEMENT[challenge.status as ChallengeStatus] ?? ""}</p>
           <ResolveState challenge={challenge} />
         </Card>
+
+        <ChallengeActions challenge={challenge} />
       </div>
     </>
   );

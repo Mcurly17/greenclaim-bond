@@ -867,6 +867,223 @@
       },
       "type": 2,
       "status_name": "FINALIZED"
+    },
+    "failed_expected_brand_self_challenge": {
+      "hash": "0x4da6d8df27b9c4fb749d3d1d48d815bac6b0768b779086a990552d51b98a3168",
+      "from_address": "0xf5Fe96d62733d40f25822b20C5E46A0E17483dFF",
+      "to_address": "0x1f55BBf41a944666B287a802CC98c118e14f0932",
+      "value": "10000000000000000",
+      "status": 7,
+      "result": 6,
+      "consensus_data": {
+        "votes": {
+          "0x045291B293B9D68969c18B6637A8258038cf787A": "agree",
+          "0x5e84e17266a193077728229751aC8A1dD24be146": "agree",
+          "0xCe0B66448435cA53665C954705Abd753515594Cf": "idle",
+          "0xF7D08d12dB37D3e02D1833b5cB7e56B07F114186": "idle",
+          "0xe06A34A1eBd398AF3399d08593B8c3C433CdD947": "agree"
+        },
+        "validators": [
+          {
+            "mode": "validator",
+            "vote": "agree",
+            "result": "AVtFWFBFQ1RFRF0gdGhlIGJyYW5kIGNhbm5vdCBjaGFsbGVuZ2UgaXRzIG93biBwbGVkZ2U=",
+            "gas_used": 0,
+            "genvm_result": {
+              "stderr": "",
+              "stdout": "",
+              "raw_error": null,
+              "error_code": null,
+              "error_description": null
+            },
+            "nondet_disagree": null,
+            "processing_time": 1114,
+            "execution_result": "ERROR",
+            "contract_state_hash": "474ca256c29c2dd61bf56550918158c3e604ae7b0a824d83d12d5bfa176f8849"
+          },
+          {
+            "mode": "validator",
+            "vote": "idle",
+            "result": "AmlkbGU=",
+            "gas_used": 0,
+            "genvm_result": {
+              "stderr": "Validator execution cancelled after quorum",
+              "stdout": "",
+              "raw_error": {
+                "fatal": false,
+                "causes": [
+                  "VALIDATOR_QUORUM_REACHED"
+                ]
+              },
+              "error_code": "CONSENSUS_VALIDATOR_QUORUM_REACHED"
+            },
+            "nondet_disagree": null,
+            "processing_time": 0,
+            "execution_result": "ERROR",
+            "contract_state_hash": null
+          },
+          {
+            "mode": "validator",
+            "vote": "agree",
+            "result": "AVtFWFBFQ1RFRF0gdGhlIGJyYW5kIGNhbm5vdCBjaGFsbGVuZ2UgaXRzIG93biBwbGVkZ2U=",
+            "gas_used": 0,
+            "genvm_result": {
+              "stderr": "",
+              "stdout": "",
+              "raw_error": null,
+              "error_code": null,
+              "error_description": null
+            },
+            "nondet_disagree": null,
+            "processing_time": 1065,
+            "execution_result": "ERROR",
+            "contract_state_hash": "474ca256c29c2dd61bf56550918158c3e604ae7b0a824d83d12d5bfa176f8849"
+          },
+          {
+            "mode": "validator",
+            "vote": "idle",
+            "result": "AmlkbGU=",
+            "gas_used": 0,
+            "genvm_result": {
+              "stderr": "Validator execution cancelled after quorum",
+              "stdout": "",
+              "raw_error": {
+                "fatal": false,
+                "causes": [
+                  "VALIDATOR_QUORUM_REACHED"
+                ]
+              },
+              "error_code": "CONSENSUS_VALIDATOR_QUORUM_REACHED"
+            },
+            "nondet_disagree": null,
+            "processing_time": 0,
+            "execution_result": "ERROR",
+            "contract_state_hash": null
+          }
+        ],
+        "leader_receipt": [
+          {
+            "mode": "leader",
+            "vote": null,
+            "result": {
+              "raw": "AVtFWFBFQ1RFRF0gdGhlIGJyYW5kIGNhbm5vdCBjaGFsbGVuZ2UgaXRzIG93biBwbGVkZ2U=",
+              "status": "rollback",
+              "payload": "[EXPECTED] the brand cannot challenge its own pledge"
+            },
+            "gas_used": 0,
+            "genvm_result": {
+              "stderr": "",
+              "stdout": "",
+              "raw_error": null,
+              "error_code": null,
+              "error_description": null
+            },
+            "nondet_disagree": null,
+            "processing_time": 1005,
+            "execution_result": "ERROR",
+            "contract_state_hash": "474ca256c29c2dd61bf56550918158c3e604ae7b0a824d83d12d5bfa176f8849"
+          },
+          {
+            "mode": "validator",
+            "vote": "agree",
+            "result": {
+              "raw": "AVtFWFBFQ1RFRF0gdGhlIGJyYW5kIGNhbm5vdCBjaGFsbGVuZ2UgaXRzIG93biBwbGVkZ2U=",
+              "status": "rollback",
+              "payload": "[EXPECTED] the brand cannot challenge its own pledge"
+            },
+            "gas_used": 0,
+            "genvm_result": {
+              "stderr": "",
+              "stdout": "",
+              "raw_error": null,
+              "error_code": null,
+              "error_description": null
+            },
+            "nondet_disagree": null,
+            "processing_time": 1192,
+            "execution_result": "ERROR",
+            "contract_state_hash": "474ca256c29c2dd61bf56550918158c3e604ae7b0a824d83d12d5bfa176f8849"
+          }
+        ]
+      },
+      "gaslimit": 2,
+      "nonce": 2,
+      "created_at": "2026-10-25T16:39:32.374371+00:00",
+      "leader_only": false,
+      "execution_mode": "NORMAL",
+      "origin_address": "0xf5Fe96d62733d40f25822b20C5E46A0E17483dFF",
+      "triggered_by": null,
+      "triggered_on": null,
+      "appealed": false,
+      "timestamp_awaiting_finalization": 1792946377,
+      "appeal_failed": 0,
+      "appeal_undetermined": false,
+      "timestamp_appeal": null,
+      "appeal_processing_time": 0,
+      "config_rotation_rounds": 3,
+      "num_of_initial_validators": 5,
+      "last_vote_timestamp": "1792946377",
+      "rotation_count": 0,
+      "appeal_leader_timeout": false,
+      "leader_timeout_validators": [],
+      "appeal_validators_timeout": false,
+      "value_credited": true,
+      "current_timestamp": "1792946492",
+      "sender": "0xf5Fe96d62733d40f25822b20C5E46A0E17483dFF",
+      "recipient": "0x1f55BBf41a944666B287a802CC98c118e14f0932",
+      "tx_slot": "0",
+      "created_timestamp": "1792946372",
+      "tx_id": "0x4da6d8df27b9c4fb749d3d1d48d815bac6b0768b779086a990552d51b98a3168",
+      "activator": "0x5e84e17266a193077728229751aC8A1dD24be146",
+      "last_leader": "0x5e84e17266a193077728229751aC8A1dD24be146",
+      "result_name": "MAJORITY_AGREE",
+      "tx_execution_hash": "0xf0d9eb2b5882b0e23b730054be4c5cd7e91f822dae0137cbf4a3f7175b3634d8",
+      "queue_type": "0",
+      "queue_position": "0",
+      "num_of_rounds": "1",
+      "last_round": {
+        "round": "0",
+        "leader_index": "0",
+        "votes_committed": "5",
+        "votes_revealed": "5",
+        "appeal_bond": "0",
+        "rotations_left": "3",
+        "result": 6,
+        "round_validators": [
+          "0x5e84e17266a193077728229751aC8A1dD24be146",
+          "0x045291B293B9D68969c18B6637A8258038cf787A",
+          "0xCe0B66448435cA53665C954705Abd753515594Cf",
+          "0xe06A34A1eBd398AF3399d08593B8c3C433CdD947",
+          "0xF7D08d12dB37D3e02D1833b5cB7e56B07F114186"
+        ],
+        "validator_votes_hash": [
+          "0x015558b78d65d9cb4fb7424f4d86e4637c0f443a22120be20b6b81e9669945ff",
+          "0xbc279b3ea6d96d7296067f8b048d7254952f96ed18378440403d38d031e4f264",
+          "0xf138aa0c01843669beb06d8077aa0dc1b717980ebcfc7d7752879b4c934657b3",
+          "0x2ce3ac0d1e7871b9f25e226f570da0c2ba7175c209e2d89fc3573e49c17731e0",
+          "0x5caa84e10027c46c74b64e8458bd4528a821d191c8eddf4386b4c75cbb9fe60d"
+        ],
+        "validator_votes": [
+          1,
+          1,
+          5,
+          1,
+          5
+        ],
+        "validator_votes_name": [
+          "AGREE",
+          "AGREE",
+          "IDLE",
+          "AGREE",
+          "IDLE"
+        ]
+      },
+      "blockHash": null,
+      "blockNumber": null,
+      "to": null,
+      "transactionIndex": null,
+      "typeHex": 2,
+      "statusName": "FINALIZED"
     }
   },
   "read_error_unknown_pledge": {

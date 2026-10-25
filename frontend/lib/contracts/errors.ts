@@ -59,13 +59,33 @@ export type ReadErrorKind = "config" | "not_found" | "contract" | "rpc";
 export class GreenClaimReadError extends Error {
   kind: ReadErrorKind;
   code: ContractErrorCode | null;
+  /** False for a timeout: it already waited, so the Retry button decides, not an automatic retry. */
+  retryable: boolean;
 
-  constructor(kind: ReadErrorKind, message: string, code: ContractErrorCode | null = null) {
+  constructor(kind: ReadErrorKind, message: string, code: ContractErrorCode | null = null, retryable = true) {
     super(message);
     this.name = "GreenClaimReadError";
     this.kind = kind;
     this.code = code;
+    this.retryable = retryable;
   }
+}
+
+/** Rejects with `timeoutError()` when `promise` is still pending after `ms`. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, timeoutError: () => Error): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(timeoutError()), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 function errorChain(err: unknown): Record<string, unknown>[] {
